@@ -1,4 +1,5 @@
-/* $Id: cmd.bhc.c 397 2007-11-26 19:04:00Z mblack $
+/*
+ * Copyright (C) 2016 David Bigagli
  * Copyright (C) 2007 Platform Computing Inc
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,23 +18,18 @@
  */
 
 #include "cmd.h"
-#include <netdb.h>
-#include <ctype.h>
 
-#define NL_SETN 8
-
-
-extern char *myGetOpt (int nargc, char **nargv, char *ostr);
+extern char *myGetOpt(int nargc, char **nargv, char *ostr);
 extern int getConfirm(char *);
 
-static void ctrlHost (char *, int, int);
-static int  doConfirm (int, char *);
+static void ctrlHost(char *, int, int);
+static int  doConfirm(int, char *);
 static int exitrc;
 static char *opStr;
 static struct hostInfoEnt *getHostList(int *numHosts, char **inputHosts);
 
 int
-bhc (int argc, char *argv[], int opCode)
+bhc(int argc, char *argv[], int opCode)
 {
     struct hostInfoEnt *hostInfo ;
     char **hostPoint ;
@@ -46,29 +42,29 @@ bhc (int argc, char *argv[], int opCode)
 
     while ((optName = myGetOpt(argc, argv, "f|")) != NULL) {
         switch (optName[0]) {
-        case 'f':
-            fFlag = TRUE;
-            break;
-        default:
-            return -2;
+            case 'f':
+                fFlag = TRUE;
+                break;
+            default:
+                return -2;
         }
     }
     switch (opCode) {
-    case HOST_OPEN :
-        opStr = (_i18n_msg_get(ls_catd,NL_SETN,901, "Open")); /* catgets  901  */
-        break;
-    case HOST_CLOSE :
-        opStr = (_i18n_msg_get(ls_catd,NL_SETN,902, "Close")); /* catgets  902  */
-        break;
-    case HOST_REBOOT :
-        opStr = (_i18n_msg_get(ls_catd,NL_SETN,903, "Restart slave batch daemon on")); /* catgets  903  */
-        break;
-    case HOST_SHUTDOWN :
-        opStr = (_i18n_msg_get(ls_catd,NL_SETN,904, "Shut down slave batch daemon on")); /* catgets  904  */
-        break;
-    default :
-        fprintf(stderr, (_i18n_msg_get(ls_catd,NL_SETN,905, "Unknown operation code\n"))); /* catgets  905  */
-        exit(-1);
+        case HOST_OPEN :
+            opStr = (_i18n_msg_get(ls_catd,NL_SETN,901, "Open")); /* catgets  901  */
+            break;
+        case HOST_CLOSE :
+            opStr = (_i18n_msg_get(ls_catd,NL_SETN,902, "Close")); /* catgets  902  */
+            break;
+        case HOST_REBOOT :
+            opStr = (_i18n_msg_get(ls_catd,NL_SETN,903, "Restart slave batch daemon on")); /* catgets  903  */
+            break;
+        case HOST_SHUTDOWN :
+            opStr = (_i18n_msg_get(ls_catd,NL_SETN,904, "Shut down slave batch daemon on")); /* catgets  904  */
+            break;
+        default :
+            fprintf(stderr, (_i18n_msg_get(ls_catd,NL_SETN,905, "Unknown operation code\n"))); /* catgets  905  */
+            exit(-1);
     }
 
     exitrc = 0;
@@ -81,15 +77,15 @@ bhc (int argc, char *argv[], int opCode)
 
 
     if ((opCode == HOST_REBOOT || opCode == HOST_SHUTDOWN) &&
-	!(numHosts == 0 && all)) {
+        !(numHosts == 0 && all)) {
 
-	if ((hostInfo = getHostList(&numHosts, hostPoint)) == NULL)
-	    return -1;
+        if ((hostInfo = getHostList(&numHosts, hostPoint)) == NULL)
+            return -1;
     } else {
-	if ((hostInfo = lsb_hostinfo (hostPoint, &numHosts)) == NULL) {
-	    lsb_perror(NULL);
-	    return -1;
-	}
+        if ((hostInfo = lsb_hostinfo (hostPoint, &numHosts)) == NULL) {
+            lsb_perror(NULL);
+            return -1;
+        }
     }
 
     if (!fFlag && all && (opCode == HOST_REBOOT || opCode == HOST_SHUTDOWN))
@@ -115,16 +111,17 @@ bhc (int argc, char *argv[], int opCode)
 }
 
 static void
-ctrlHost (char *host, int hStatus, int opCode)
+ctrlHost(char *host, int hStatus, int opCode)
 {
 
     if (lsb_hostcontrol(host, opCode) < 0) {
         char i18nBuf[100];
-	sprintf(i18nBuf,I18N_FUNC_FAILED,"Host control");
+        sprintf(i18nBuf,I18N_FUNC_FAILED,"Host control");
         lsb_perror (i18nBuf );
-	exitrc = -1;
+        exitrc = -1;
         return;
     }
+
     if (opCode == HOST_OPEN) {
         if (hStatus & (HOST_STAT_BUSY | HOST_STAT_WIND | HOST_STAT_LOCKED_MASTER
                        | HOST_STAT_LOCKED | HOST_STAT_FULL)) {
@@ -149,7 +146,7 @@ ctrlHost (char *host, int hStatus, int opCode)
 }
 
 static int
-doConfirm (int opCode, char *host)
+doConfirm(int opCode, char *host)
 {
     char msg[MAXLINELEN];
 
@@ -158,7 +155,7 @@ doConfirm (int opCode, char *host)
 
     sprintf(msg, "\n%s %s? [y/n] ", opStr, host);
 
-    return (getConfirm(msg));
+    return getConfirm(msg);
 
 }
 
@@ -172,22 +169,21 @@ getHostList(int *numHosts, char **inputHosts)
     FREEUP(hostInfo);
 
     if ((hostInfo = (struct hostInfoEnt *) calloc(*numHosts + 1,
-						  sizeof(struct hostInfoEnt)))
-	== NULL) {
-	perror("calloc");
-	return NULL;
+                                                  sizeof(struct hostInfoEnt)))
+        == NULL) {
+        perror("calloc");
+        return NULL;
     }
 
     if (inputHosts) {
-	for (i = 0; i < *numHosts; i++)
-	    hostInfo[i].host = inputHosts[i];
+        for (i = 0; i < *numHosts; i++)
+            hostInfo[i].host = inputHosts[i];
     } else {
-	if ((localHost = ls_getmyhostname()) == NULL)
-	    hostInfo[0].host = "localhost";
-	else
-	    hostInfo[0].host = localHost;
+        if ((localHost = ls_getmyhostname()) == NULL)
+            hostInfo[0].host = "localhost";
+        else
+            hostInfo[0].host = localHost;
     }
 
     return hostInfo;
 }
-
