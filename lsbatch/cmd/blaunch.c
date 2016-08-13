@@ -50,7 +50,6 @@ static int redirect_stdin(void);
 static int get_host_list(const char *);
 static int get_host_list_from_file(const char *);
 static int count_lines(FILE *);
-static int get_hosts_from_env(void);
 static int get_hosts_from_arg(void);
 static void make_tasks(void);
 static void build_command(void);
@@ -169,8 +168,6 @@ main(int argc, char **argv)
      * the command line, so the host is the
      * next argv[] params
      */
-    if (! host_list)
-        get_hosts_from_env();
 
     if (!host_list)
         get_hosts_from_arg();
@@ -392,26 +389,6 @@ count_lines(FILE *fp)
     return n;
 }
 
-/* get_host_from_env()
- *
- * Get host list from the process env
- */
-static int
-get_hosts_from_env(void)
-{
-    char *p;
-
-    /* This should give me the hosts with their
-     * multiplicity.
-     */
-    if (! (p = getenv("LSB_HOSTS")))
-        return -1;
-
-    get_host_list(p);
-
-    return 0;
-}
-
 /* get_hosts_from_args()
  *
  * Get host list from commmand line arguments
@@ -490,7 +467,7 @@ static void
 build_command(void)
 {
     int cc;
-    int n;
+    int n, l;
 
     /* no command to build, optind now points
      * to the first non option argument of blaunch
@@ -505,6 +482,13 @@ build_command(void)
     n = 0;
     for (cc = optind; cc < arg_count; cc++) {
         command[n] = strdup(arg_char[cc]);
+        l = strlen(command[n]);
+        while(command[n][0] == ' ' || command[n][0] == '"') {
+            memmove(command[n], command[n] + 1, l);
+            l--;
+        }
+        if (command[n][l-1] == '"')
+            command[n][l-1] = '\0';
         ++n;
     }
 
