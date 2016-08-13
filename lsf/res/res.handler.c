@@ -2906,19 +2906,6 @@ execit(char **uargv,
             cmd = NULL;
         }
     } else {
-        errno = 0;
-        {
-            struct stat sbuf;
-
-            if (stat(uargv[0], &sbuf) < 0) {
-                ls_syslog(LOG_ERR, "\
-%s: stat on %s failed %m", __func__, uargv[0]);
-            }
-            for (i = 0; uargv[i]; i++)
-                ls_syslog(LOG_INFO, "%s arg %s", __func__, uargv[i]);
-            for (i = 0; environ[i]; i++)
-                ls_syslog(LOG_INFO, "%s env %s", __func__, environ[i]);
-        }
         execvp(uargv[0], uargv);
         perror(uargv[0]);
     }
@@ -5720,6 +5707,22 @@ cleanUpKeptPids(void)
 
     listSetIteratorDetach(&iter);
     listSetFree(pidSet);
+
+}
+
+void
+hang(void)
+{
+    int cc;
+    int i;
+
+    cc = 1;
+    i = 0;
+    while (cc) {
+        ls_syslog(LOG_ERR, "\
+%s: attachme attachme... %d", __func__, i++);
+        sleep(2);
+    }
 
 }
 
