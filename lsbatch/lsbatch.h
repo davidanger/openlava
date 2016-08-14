@@ -1686,5 +1686,6 @@ extern struct jobGroupInfo *lsb_getjgrp(int *);
 extern void free_jobgroupinfo(int, struct jobGroupInfo *);
 extern struct resLimitReply *lsb_getlimits();
 extern void free_resLimits(struct resLimitReply *);
+extern int lsb_launch(char **, char **, int, char **);
 
 #endif

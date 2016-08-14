@@ -19,6 +19,7 @@ Release notes for OpenLava versions
 -- Started blaunch development.
 -- Developed new API ls_getrpid() to get a remote process id of a task
    started by RES knowing the local taskid.
+-- Developed new API lsb_launch() to start a components of parallel jobs.
 
 3.3.3
 ======

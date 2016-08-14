@@ -1124,12 +1124,10 @@ do_blaunch_rusage(XDR *xdrs, int chfd, struct LSFHeader *hdr)
 {
     struct jobCard *jPtr;
     int jobID;
-    int stepID;
 
     /* Get the job id
      */
-    if (! xdr_int(xdrs, &jobID)
-        || ! xdr_int(xdrs, &stepID)) {
+    if (! xdr_int(xdrs, &jobID)) {
         ls_syslog(LOG_ERR, "\%s: failed dencoding jobid %s", __func__, jobID);
         xdr_destroy(xdrs);
         return;
