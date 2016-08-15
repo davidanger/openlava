@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 David Bigagli
+ * Copyright (C) 2015 - 2016 David Bigagli
  * Copyright (C) 2007 Platform Computing Inc
  *
  * This program is free software; you can redistribute it and/or modify
@@ -20,11 +20,7 @@
 #ifndef _RESOUT_H_
 #define _RESOUT_H_
 
-#include <termios.h>
 #include "../lib/lib.hdr.h"
-
-
-#include <sys/ioctl.h>
 
 #if !defined(TIOCGWINSZ)
 struct winsize {
@@ -88,7 +84,10 @@ typedef enum {
     RES_RMI  = 99
 } resCmd;
 
-
+/* The buffer size in which we encode and decode
+ * the res processid information
+ */
+#define RES_PID_BUF 256
 
 struct resConnect {
     struct lenData eexec;

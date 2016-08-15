@@ -4,6 +4,15 @@ Release notes for OpenLava versions
            ^
            |
            |
+-- Developed new API ls_getrpid() to get a remote process id of a task
+   started by RES knowing the local taskid.
+-- Developed new API lsb_launch() to start a components of parallel jobs.
+   This API also collects resource usage of the remote tasks and reports
+   the to OpenLava so they can be displayed with the bjobs command.
+-- Developed the blaunch command, if mpiexec/mpirun is integrated with
+   blaunch, it can launch mpi parallel application, or it can launch
+   home grown parallel applications. It is a wrapper around the lsb_launch()
+   API.
 -- In the bootstrap.sh file create the revision number file
    which is going to be installed in the etc directory.
 -- Create lsid 4.0dev4 output.

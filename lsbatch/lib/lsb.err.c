@@ -176,14 +176,14 @@ lsb_sysmsg(void)
     }
 
     if (lsberrno == LSBE_SYS_CALL) {
-	if (errno > 0)
-	    sprintf(buf, "%s: %s", lsb_errmsg[lsberrno], strerror(errno));
-	else
-	    sprintf(buf, "%s: unknown error %d", lsb_errmsg[lsberrno], errno);
+        if (errno > 0)
+            sprintf(buf, "%s: %s", lsb_errmsg[lsberrno], strerror(errno));
+        else
+            sprintf(buf, "%s: unknown error %d", lsb_errmsg[lsberrno], errno);
     } else if (lsberrno == LSBE_LSLIB) {
-	sprintf(buf, "%s: %s", lsb_errmsg[lsberrno], ls_sysmsg());
+        sprintf(buf, "%s: %s", lsb_errmsg[lsberrno], ls_sysmsg());
     } else {
-	return lsb_errmsg[lsberrno];
+        return lsb_errmsg[lsberrno];
     }
 
     return buf;

@@ -533,6 +533,13 @@
 #define  DEL_NUMPRO        INFINIT_INT
 #define  DEFAULT_NUMPRO    INFINIT_INT -1
 
+/* Sometime the calls SBD so here we define
+ * the protocol codes for those calls
+ */
+typedef enum {
+    SBD_BLAUNCH_RUSAGE = 500
+} sbd_lib_opcode_t;
+
 struct xFile {
     char subFn[MAXFILENAMELEN];
     char execFn[MAXFILENAMELEN];
@@ -1691,5 +1698,6 @@ extern void free_jobgroupinfo(int, struct jobGroupInfo *);
 extern struct resLimitReply *lsb_getlimits();
 extern void free_resLimits(struct resLimitReply *);
 extern void freeWeek (windows_t **);
+extern int lsb_launch(char **, char **, int, char **);
 
 #endif

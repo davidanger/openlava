@@ -32,7 +32,7 @@ tid_register(int taskid, int socknum, u_short taskPort, char *host, bool_t doTas
     struct tid *tidp;
     int i;
 
-    if ((tidp = (struct tid *)malloc(sizeof(struct tid))) ==
+    if ((tidp = calloc(1, sizeof(struct tid))) ==
         (struct tid *)NULL) {
         lserrno = LSE_MALLOC;
         return -1;
@@ -48,7 +48,6 @@ tid_register(int taskid, int socknum, u_short taskPort, char *host, bool_t doTas
     tidp->link = tid_buckets[i];
     tid_buckets[i] = tidp;
 
-
     if (doTaskInfo) {
         lsQueueInit_(&tidp->tMsgQ, NULL, tMsgDestroy_);
         if (tidp->tMsgQ == NULL) {
@@ -62,7 +61,6 @@ tid_register(int taskid, int socknum, u_short taskPort, char *host, bool_t doTas
     tidp->isEOF = (doTaskInfo)? FALSE : TRUE;
 
     return 0;
-
 }
 
 int

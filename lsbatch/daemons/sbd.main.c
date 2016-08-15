@@ -565,8 +565,13 @@ processMsg(struct clientNode *client)
             break;
 
         case SBD_SYSLOG:
-            TIMEIT(4, do_jobSyslog(&xdrs, client->chanfd, &reqHdr), "do_jobSyslog");;
+            TIMEIT(4, do_jobSyslog(&xdrs, client->chanfd, &reqHdr), "do_jobSyslog");
             delay_check = TRUE;
+            break;
+        case SBD_BLAUNCH_RUSAGE:
+            TIMEIT(4, do_blaunch_rusage(&xdrs,
+                                        client->chanfd, &reqHdr),
+                   "do_blauch_rusage()");
             break;
         default:
             ls_syslog(LOG_ERR, "\

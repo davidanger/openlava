@@ -2545,8 +2545,8 @@ statusJob(struct statusReq *statusReq, struct hostent *hp, int *schedule)
 
     if ((statusReq->newStatus & JOB_STAT_MIG) && (statusReq->actPid == 0)) {
         ls_syslog(LOG_ERR, "\
-%s: Job <%s> is in migration status, but chkpid is 0; illegal status reported from host/cluster <%s>",
-                  fname,
+%s: Job %s is in migration status, but chkpid is 0; illegal status reported from host %s",
+                  __func__,
                   lsb_jobid2str(jpbw->jobId),
                   host);
         return LSBE_SBATCHD;

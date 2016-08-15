@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 David Bigagli
+ * Copyright (C) 2015 - 2016 David Bigagli
  * Copyright (C) 2007 Platform Computing Inc
  *
  * This program is free software; you can redistribute it and/or modify
@@ -172,19 +172,29 @@ lsConnWait_(char *host)
     return 0;
 }
 
+/* sendCmdBill_()
+ *
+ * Send command instruction to res.
+ */
 int
-sendCmdBill_ (int s, resCmd cmd, struct resCmdBill *cmdmsg, int *retsock,
-              struct timeval *timeout)
-
+sendCmdBill_(int s,
+             resCmd cmd,
+             struct resCmdBill *cmdmsg,
+             int *retsock,
+             struct timeval *timeout)
 {
     char *buf;
-    int  i,bufsize,cc;
+    int  i;
+    int bufsize;
+    int cc;
 
     bufsize = 1024;
-    bufsize = bufsize + ALIGNWORD_(strlen(cmdmsg->cwd)) + sizeof(int);
-    for (i=0; cmdmsg->argv[i]; i++)
+    bufsize = bufsize + ALIGNWORD_(strlen(cmdmsg->cwd) + 1) + sizeof(int);
+
+    for (i = 0; cmdmsg->argv[i]; i++)
         bufsize = bufsize + ALIGNWORD_(strlen(cmdmsg->argv[i])) + sizeof(int);
-    if ((buf=malloc(bufsize)) == NULL) {
+
+    if ((buf = malloc(bufsize)) == NULL) {
         lserrno = LSE_MALLOC;
         return -1;
     }
@@ -196,8 +206,15 @@ sendCmdBill_ (int s, resCmd cmd, struct resCmdBill *cmdmsg, int *retsock,
         free(buf);
         return -1;
     }
-    cc=callRes_(s, cmd, (char *) cmdmsg, buf, bufsize, xdr_resCmdBill,
-                retsock, timeout, NULL);
+    cc = callRes_(s,
+                  cmd,
+                  (char *)cmdmsg,
+                  buf,
+                  bufsize,
+                  xdr_resCmdBill,
+                  retsock,
+                  timeout,
+                  NULL);
     free(buf);
     return cc;
 
@@ -267,13 +284,14 @@ ls_pclose(FILE *fp)
 #define RSETENV_SYNCH   1
 #define RSETENV_ASYNC   2
 int
-rsetenv_ (char *host, char **envp, int option)
+rsetenv_(char *host, char **envp, int option)
 {
-    int    descriptor[2];
+    int descriptor[2];
     struct resSetenv envMsg;
-    char   *sendBuf;
-    int    bufferSize;
-    int    i, s;
+    char *sendBuf;
+    int bufferSize;
+    int i;
+    int s;
     resCmd resCmdOption;
 
     bufferSize = 512;
@@ -284,10 +302,10 @@ rsetenv_ (char *host, char **envp, int option)
     if (!envp)
         return 0;
 
-    for(i=0; envp[i] != NULL; i++)
+    for(i = 0; envp[i] != NULL; i++)
         bufferSize = bufferSize + ALIGNWORD_(strlen(envp[i])) + sizeof(int);
 
-    sendBuf = (char *)malloc(bufferSize);
+    sendBuf = malloc(bufferSize);
     if (sendBuf == NULL) {
         lserrno = LSE_MALLOC;
         goto err;
@@ -300,7 +318,7 @@ rsetenv_ (char *host, char **envp, int option)
         goto err;
     }
 
-    if (!FD_ISSET(s,&connection_ok_)){
+    if (! FD_ISSET(s,&connection_ok_)){
         FD_SET(s,&connection_ok_);
         if (ackReturnCode_(s) < 0) {
             closesocket(s);
@@ -315,8 +333,15 @@ rsetenv_ (char *host, char **envp, int option)
         resCmdOption = RES_SETENV;
     else if (option == RSETENV_ASYNC)
         resCmdOption = RES_SETENV_ASYNC;
-    if (callRes_(s, resCmdOption, (char *) &envMsg, sendBuf, bufferSize,
-                 xdr_resSetenv, 0, 0, NULL) == -1) {
+    if (callRes_(s,
+                 resCmdOption,
+                 (char *)&envMsg,
+                 sendBuf,
+                 bufferSize,
+                 xdr_resSetenv,
+                 0,
+                 0,
+                 NULL) == -1) {
         closesocket(s);
         _lostconnection_(host);
         free(sendBuf);
@@ -342,19 +367,20 @@ err:
 int
 ls_rsetenv_async (char *host, char **envp)
 {
-    return rsetenv_ ( host, envp, RSETENV_ASYNC);
+    return rsetenv_( host, envp, RSETENV_ASYNC);
 }
 
 int
 ls_rsetenv(char *host, char **envp)
 {
-    return rsetenv_ ( host, envp, RSETENV_SYNCH);
+    return rsetenv_( host, envp, RSETENV_SYNCH);
 }
 
 int
 ls_chdir(char *host, char *dir)
 {
-    int s, descriptor[2];
+    int s;
+    int descriptor[2];
     struct {
         struct LSFHeader hdr;
         struct resChdir ch;
@@ -366,7 +392,7 @@ ls_chdir(char *host, char *dir)
     else if ((s = ls_connect(host)) < 0)
         return -1;
 
-    if (!FD_ISSET(s,&connection_ok_)){
+    if (! FD_ISSET(s,&connection_ok_)){
         FD_SET(s,&connection_ok_);
         if (ackReturnCode_(s) < 0) {
             closesocket(s);
@@ -382,8 +408,15 @@ ls_chdir(char *host, char *dir)
 
     strcpy(chReq.dir, dir);
 
-    if (callRes_(s, RES_CHDIR, (char *) &chReq, (char *) &buf,
-                 sizeof(buf), xdr_resChdir, 0, 0, NULL) == -1) {
+    if (callRes_(s,
+                 RES_CHDIR,
+                 (char *)&chReq,
+                 (char *)&buf,
+                 sizeof(buf),
+                 xdr_resChdir,
+                 0,
+                 0,
+                 NULL) == -1) {
         closesocket(s);
         _lostconnection_(host);
         return -1;
@@ -411,7 +444,6 @@ lsReqHandCreate_(int tid,
     struct lsRequest *request;
 
     request = calloc(1, sizeof(struct lsRequest));
-
     if (! request) {
         lserrno = LSE_MALLOC;
         return NULL;
@@ -432,12 +464,12 @@ lsReqHandCreate_(int tid,
 int
 ackAsyncReturnCode_(int s, struct LSFHeader *replyHdr)
 {
-    char                  cseqno;
-    int                   seqno;
-    int                   len;
-    int                   rc;
-    struct lsQueueEntry   *reqEntry;
-    struct lsRequest      *reqHandle;
+    char cseqno;
+    int seqno;
+    int len;
+    int rc;
+    struct lsQueueEntry *reqEntry;
+    struct lsRequest *reqHandle;
 
     seqno = replyHdr->refCode;
     cseqno = seqno;
@@ -488,7 +520,6 @@ ackAsyncReturnCode_(int s, struct LSFHeader *replyHdr)
 
     lsQueueEntryDestroy_(reqEntry, requestQ);
     return rc;
-
 }
 
 int
@@ -503,7 +534,7 @@ enqueueTaskMsg_(int s, int taskID, struct LSFHeader *msgHdr)
         return -1;
     }
 
-    header = (struct lsTMsgHdr *)malloc(sizeof(struct lsTMsgHdr));
+    header = calloc(1, sizeof(struct lsTMsgHdr));
     if (! header) {
         lserrno = LSE_MALLOC;
         return -1;
@@ -520,13 +551,11 @@ enqueueTaskMsg_(int s, int taskID, struct LSFHeader *msgHdr)
     /* or 0xffff ?
      */
     if (msgHdr->reserved == 0
-        && msgHdr->length == 0)
-    {
+        && msgHdr->length == 0) {
         header->type = LSTMSG_EOF;
         lsQueueDataAppend_((char *)header, tEnt->tMsgQ);
         return 0;
     }
-
 
     if (msgHdr->length == 0)
         msgBuf = malloc(1);
@@ -556,14 +585,13 @@ int
 expectReturnCode_(int s, int seqno, struct LSFHeader *repHdr)
 {
     struct LSFHeader buf;
-    static char fname[] = "expectReturnCode_";
     XDR xdrs;
     int rc;
 
     xdrmem_create(&xdrs, (char *) &buf, sizeof(struct LSFHeader), XDR_DECODE);
     for (;;) {
         if (logclass & LC_TRACE)
-            ls_syslog(LOG_DEBUG, "%s: calling readDecodeHdr_...", fname);
+            ls_syslog(LOG_DEBUG, "%s: calling readDecodeHdr_...", __func__);
         xdr_setpos(&xdrs, 0);
         if (readDecodeHdr_(s, (char *) &buf, b_read_fix, &xdrs, repHdr) < 0) {
             xdr_destroy(&xdrs);
@@ -589,7 +617,6 @@ expectReturnCode_(int s, int seqno, struct LSFHeader *repHdr)
     }
     xdr_destroy(&xdrs);
     return 0;
-
 }
 
 int
@@ -670,10 +697,9 @@ ackReturnCode_(int s)
     struct LSFHeader repHdr;
     int rc;
     char hostname[MAXHOSTNAMELEN];
-    static char fname[] = "ackReturnCode_";
 
     if (logclass & (LC_TRACE))
-        ls_syslog(LOG_DEBUG, "%s: Entering this routine...", fname);
+        ls_syslog(LOG_DEBUG, "%s: Entering this routine...", __func__);
 
     gethostbysock_(s, hostname);
     currentSN = _getcurseqno_(hostname);
@@ -684,18 +710,16 @@ ackReturnCode_(int s)
     lsf_res_version = (int)repHdr.version;
 
     rc = resRC2LSErr_(repHdr.opCode);
-
     if (rc == 0)
         return 0;
     else
         return -1;
-
 }
 
 static int
 getLimits(struct lsfLimit *limits)
 {
-    return (mygetLimits(limits));
+    return mygetLimits(limits);
 }
 static int
 mygetLimits(struct lsfLimit *limits)
@@ -808,6 +832,8 @@ int callRes_(int s,
         return -1;
     }
 
+    /* Used when res call back to nios in sendCmdBill()
+     */
     if (!rd) {
         sigprocmask(SIG_SETMASK, &oldMask, NULL);
         return 0;
@@ -1839,7 +1865,6 @@ lsReqWait_(LS_REQUEST_T *request, int options)
 
 }
 
-
 void
 lsReqFree_(LS_REQUEST_T *request)
 {
@@ -1860,3 +1885,192 @@ _lostconnection_(char *hostName)
     FD_CLR(connSockNum, &connection_ok_);
 
 }
+
+/* ls_getrusage()
+ */
+struct jRusage *
+ls_getrusage(int taskid)
+{
+    int s;
+    int cc;
+    struct tid *tid;
+    struct resRusage rusageReq;
+    char *reqbuf;
+    char *rep_buf;
+    char host[MAXHOSTNAMELEN];
+    XDR xdrs;
+    struct LSFHeader hdr;
+    struct jRusage *jru;
+
+    memset(&rusageReq, 0, sizeof(struct resRusage));
+
+    if ((tid = tid_find(taskid)) == NULL) {
+        return NULL;
+    }
+
+    s = tid->sock;
+    gethostbysock_(s, host);
+
+    if (!FD_ISSET(s,&connection_ok_)){
+        FD_SET(s,&connection_ok_);
+        if (ackReturnCode_(s) < 0) {
+            closesocket(s);
+            _lostconnection_(host);
+            return NULL;
+        }
+    }
+
+    rusageReq.rid = taskid;
+    rusageReq.whatid = RES_RID_ISTID;
+
+    cc = sizeof(struct resRusage) + sizeof(struct LSFHeader);
+    cc = cc * sizeof(int);
+    reqbuf = calloc(cc, sizeof(char));
+
+    if (callRes_(s,
+                 RES_RUSAGE,
+                 (char *)&rusageReq,
+                 (char *)reqbuf,
+                 cc,
+                 xdr_resGetRusage,
+                 0,
+                 0,
+                 NULL) == -1) {
+        closesocket(s);
+        _lostconnection_(host);
+        _free_(reqbuf);
+        return NULL;
+    }
+
+    if (ackReturnCode2_(s, &hdr, &rep_buf) < 0) {
+        close(s);
+        _lostconnection_(host);
+        lserrno = LSE_SOCK_SYS;
+        _free_(reqbuf);
+        return NULL;
+    }
+
+
+    xdrmem_create(&xdrs, rep_buf, hdr.length, XDR_DECODE);
+
+    jru = calloc(1, sizeof(struct jRusage));
+
+    if (! xdr_jRusage(&xdrs, jru, &hdr)) {
+        lserrno = LSE_BAD_XDR;
+        xdr_destroy(&xdrs);
+        lserrno = LSE_BAD_XDR;
+        _free_(reqbuf);
+        return NULL;
+    }
+
+    xdr_destroy(&xdrs);
+    _free_(reqbuf);
+    _free_(rep_buf);
+
+    return jru;
+}
+/* ackReturnCode2_()
+ *
+ * Get the return code from res and the header that
+ * may be followed by additional data.
+ */
+int
+ackReturnCode2_(int s, struct LSFHeader *hdr, char **reply)
+{
+    char buf[sizeof(struct LSFHeader)];
+    XDR xdrs;
+
+    xdrmem_create(&xdrs, buf, sizeof(struct LSFHeader), XDR_DECODE);
+
+    if (readDecodeHdr_(s, (char *)&buf, b_read_fix, &xdrs, hdr) < 0) {
+        xdr_destroy(&xdrs);
+        return -1;
+    }
+
+    if (hdr->length > 0
+        && reply) {
+        int cc;
+
+        *reply = calloc(hdr->length, sizeof(char));
+        if (*reply == NULL) {
+            lserrno = LSE_NO_MEM;
+            xdr_destroy(&xdrs);
+            return -1;
+        }
+
+        cc = b_read_fix(s, *reply, hdr->length);
+        if (cc != hdr->length) {
+            lserrno = LSE_SOCK_SYS;
+            free(*reply);
+            xdr_destroy(&xdrs);
+            return -1;
+        }
+    }
+
+    xdr_destroy(&xdrs);
+
+    /* Translate the RES code, perhaps we could use the LSE
+     * code in the entire system.
+     */
+    switch (hdr->opCode) {
+        case RESE_OK:
+            return LSE_NO_ERR;
+        case RESE_NOMORECONN:
+            lserrno = LSE_RES_NOMORECONN;
+            break;
+        case RESE_BADUSER:
+            lserrno = LSE_BADUSER;
+            break;
+        case RESE_ROOTSECURE:
+            lserrno = LSE_RES_ROOTSECURE;
+            break;
+        case RESE_DENIED:
+            lserrno = LSE_RES_DENIED;
+            break;
+        case RESE_REQUEST:
+            lserrno = LSE_PROTOC_RES;
+            break;
+        case RESE_CALLBACK:
+            lserrno = LSE_RES_CALLBACK;
+            break;
+        case RESE_NOMEM:
+            lserrno = LSE_RES_NOMEM;
+            break;
+        case RESE_FATAL:
+            lserrno = LSE_RES_FATAL;
+            break;
+        case RESE_CWD:
+            lserrno = LSE_RES_DIR;
+            break;
+        case RESE_PTYMASTER:
+        case RESE_PTYSLAVE:
+            lserrno = LSE_RES_PTY;
+            break;
+        case RESE_SOCKETPAIR:
+            lserrno = LSE_RES_SOCK;
+            break;
+        case RESE_FORK:
+            lserrno = LSE_RES_FORK;
+            break;
+        case RESE_INVCHILD:
+            lserrno = LSE_RES_INVCHILD;
+            break;
+        case RESE_KILLFAIL:
+            lserrno = LSE_RES_KILL;
+            break;
+        case RESE_VERSION:
+            lserrno = LSE_RES_VERSION;
+            break;
+        case RESE_DIRW:
+            lserrno = LSE_RES_DIRW;
+            break;
+        case RESE_NOLSF_HOST:
+            lserrno = LSE_NLSF_HOST;
+            break;
+        default:
+            lserrno = NOCODE + hdr->opCode;
+    }
+
+    return -1;
+}
+

@@ -996,6 +996,14 @@ extern int ls_rmcgroup_mem(pid_t);
 extern int lsb_constrain_mem(const char *, int, pid_t);
 extern int lsb_rmcgroup_mem(const char *,  pid_t);
 
+/* ls_getrpid()
+ *
+ * Get remote process id of a task based in its
+ * taskid which is set locally by the library.
+ */
+extern int ls_getrpid(int, pid_t *);
+extern struct jRusage *ls_getrusage(int);
+
 #ifndef __CYGWIN__
 extern int optind;
 extern char *optarg;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 David Bigagli
+ * Copyright (C) 2015 -2016 David Bigagli
  * Copyright (C) 2007 Platform Computing Inc
  *
  * This program is free software; you can redistribute it and/or modify
@@ -44,10 +44,7 @@
 #define JOBFILEEXT ""
 
 #define JOBFILE_CREATED -1
-
-enum {
-    JSUPER_STAT_SUSP
-};
+#define JSUPER_STAT_SUSP 0
 
 struct jobCard {
     struct jobCard *forw;
@@ -269,11 +266,10 @@ extern void do_probe(XDR *xdrs, int s, struct LSFHeader *);
 extern void do_reboot(XDR *xdrs, int s, struct LSFHeader *);
 extern void do_shutdown(XDR *xdrs, int s, struct LSFHeader *);
 extern void do_jobSetup(XDR *xdrs, int s, struct LSFHeader *);
-extern void do_jobSyslog(XDR *xdrs, int s, struct LSFHeader *);
-extern void do_jobMsg(struct bucket *, XDR *, int s, struct LSFHeader *);
-extern void do_rmConn(XDR *, int, struct LSFHeader *, struct clientNode *);
-extern void do_lsbMsg(XDR *, int s, struct LSFHeader *);
+extern void do_jobSyslog(XDR *xdrs, int , struct LSFHeader *);
+extern void do_blaunch_rusage(XDR *, int, struct LSFHeader *);
 extern void deliverMsg(struct bucket *);
+extern void do_jobSetup(XDR *xdrs, int s, struct LSFHeader *);
 
 extern void getJobsState(struct sbdPackage *sbdPackage);
 extern int status_job(mbdReqType, struct jobCard *, int, sbdReplyType);
@@ -343,13 +339,11 @@ extern int  fcp(char *, char *, struct hostent *);
 extern int rmDir(char *);
 extern void closeBatchSocket (void);
 extern void getManagerId(struct sbdPackage *);
-
-bool_t xdr_jobSetup (XDR *, struct jobSetup *, struct LSFHeader *);
-bool_t xdr_jobSyslog (XDR *, struct jobSyslog *, struct LSFHeader *);
+bool_t xdr_jobSetup(XDR *, struct jobSetup *, struct LSFHeader *);
+bool_t xdr_jobSyslog(XDR *, struct jobSyslog *, struct LSFHeader *);
 bool_t xdr_jobCard(XDR *, struct jobCard*, struct LSFHeader *);
 extern int sizeofJobCard(struct jobCard *);
-
-extern int jobSigStart (struct jobCard *jp, int sigValue, int actFlags, int actPeriod, logType logFlag);
+extern int jobSigStart(struct jobCard *, int, int, int, logType);
 extern int jobact (struct jobCard *, int, char *, int, int);
 extern int jobsig(struct jobCard *jobTable, int sig, int forkKill);
 extern int sbdread_jobstatus (struct jobCard *jp);
@@ -357,17 +351,26 @@ extern int sbdCheckUnreportedStatus();
 extern void exeActCmd(struct jobCard *jp, char *actCmd, char *exitFile);
 extern void exeChkpnt(struct jobCard *jp, int chkFlags, char *exitFile);
 extern void init_cores(void);
-extern int* find_free_core(int num);
+extern int *find_free_core(int num);
 extern void free_core(int, int*);
 extern int bind_to_core(pid_t, int, int*);
-extern int* find_bound_core(pid_t);
+extern int *find_bound_core(pid_t);
+
 #ifdef HAVE_HWLOC_H
 extern int init_numa_topology(void);
 extern void init_numa_cores(void);
-extern int* find_free_numa_core(int);
+extern int *find_free_numa_core(int);
 extern int bind_to_numa_core(pid_t, int, int*);
 extern void bind_to_numa_mem(int*, int);
 extern void free_numa_core(int, int*);
-extern int* find_numa_bound_core(pid_t);
+extern int *find_numa_bound_core(pid_t);
 #endif
-#endif
+extern void updateJUsage(struct jobCard *, struct jRusage *);
+extern void copyPidInfo(struct jobCard *, struct jRusage *);
+extern void writePidInfoFile(struct jobCard *, struct jRusage *);
+extern void update_job_rusage(struct jobCard *, struct jRusage *);
+extern int sbdlog_newstatus(struct jobCard *);
+extern void free_jrusage(struct jRusage **);
+extern struct jRusage *get_blaunch_jrusage(void);
+extern struct jRusage *merge_jrusage(struct jRusage *, struct jRusage *);
+#endif /* _SBD_H_ */

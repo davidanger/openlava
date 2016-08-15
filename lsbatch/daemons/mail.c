@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 David Bigagli
+ * Copyright (C) 2015 - 2016 David Bigagli
  * Copyright (C) 2007 Platform Computing Inc
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,31 +17,10 @@
  *
  */
 
-#include <errno.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <stdlib.h>
-#include <time.h>
-#include <sys/time.h>
-#include <pwd.h>
-
 #include "daemons.h"
-#include <string.h>
-# include <stdarg.h>
 
-#define NL_SETN         10
-
-#ifdef NO_MAIL
-void lsb_mperr (char *msg) {}
-void lsb_merr (char *s) {}
-void merr_user (char *user, char *host, char *msg, char *type) {}
-static void addr_process (char *adbuf, char *user, char *tohost, char *spec) {}
-FILE * smail (char *to, char *tohost) {return fopen("/dev/null", "w");}
-void mclose (FILE *file) {fclose(file);}
-
-#else
 void
-lsb_mperr (char *msg)
+lsb_mperr(char *msg)
 {
     static char fname[] = "lsb_mperr()";
     char *p;
@@ -64,7 +43,7 @@ lsb_mperr (char *msg)
 }
 
 void
-lsb_merr (char *s)
+lsb_merr(char *s)
 {
     char fname[] = "lsb_merr";
     FILE *mail;
@@ -110,7 +89,7 @@ lsb_merr (char *s)
 }
 
 void
-merr_user (char *user, char *host, char *msg, char *type)
+merr_user(char *user, char *host, char *msg, char *type)
 {
     char fname[] = "merr_user";
     FILE *mail;
@@ -134,7 +113,7 @@ merr_user (char *user, char *host, char *msg, char *type)
 }
 
 static void
-addr_process (char *adbuf, char *user, char *tohost, char *spec)
+addr_process(char *adbuf, char *user, char *tohost, char *spec)
 {
     char *bp, *sp, *up;
 
@@ -262,4 +241,3 @@ mclose (FILE *file)
     else
         (void) fflush(file);
 }
-#endif

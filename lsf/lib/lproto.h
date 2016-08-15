@@ -386,5 +386,7 @@ extern int getUser(char *, unsigned int);
 extern int getUserByUid(uid_t, char *, unsigned int);
 extern int getUid(const char *, uid_t *);
 extern int _fclose_(FILE **);
+extern int ackReturnCode2_(int, struct LSFHeader *, char **);
+
 
 #endif

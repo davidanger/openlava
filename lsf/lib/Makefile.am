@@ -10,7 +10,7 @@ lib_LTLIBRARIES = liblsf.la
 
 liblsf_la_SOURCES = \
 lib.channel.c lib.err.c lib.limits.c lib.rcp.c lib.xdr.c \
-lib.comm.c lib.errno.c lib.load.c lib.rdwr.c lib.sock.c lib.xdrlim.c \
+lib.errno.c lib.load.c lib.rdwr.c lib.sock.c lib.xdrlim.c \
 lib.conf.c lib.esub.c lib.lsf.c lib.res.c lib.syntax.c lib.xdrmisc.c \
 lib.confmisc.c lib.misc.c lib.resctrl.c lib.syslog.c lib.xdrnio.c \
 lib.conn.c lib.host.c lib.nioback.c lib.reslog.c lib.table.c lib.xdrres.c \

@@ -316,5 +316,6 @@ extern int sendCmdBill_(int,
                         struct timeval *);
 extern void ls_errlog(FILE *, const char *, ...);
 extern void ls_verrlog(FILE *, const char *t, va_list );
+extern void hangme(void);
 
 #endif

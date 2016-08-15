@@ -25,6 +25,7 @@
 #include "../intlib/intlibout.h"
 #include "../lib/lproto.h"
 #include "../lib/lib.xdr.h"
+#include "../lib/lib.h"
 #include "rescom.h"
 #include "resout.h"
 

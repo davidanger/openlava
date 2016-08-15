@@ -52,6 +52,8 @@ status_job(mbdReqType reqType,
     int                i;
     int                len;
     struct lsfAuth     *auth = NULL;
+    struct jRusage *jru;
+    struct jRusage *bjru;
 
     if ((logclass & LC_TRACE) && (logclass & LC_SIGNAL))
         ls_syslog(LOG_DEBUG, "%s: Entering ... regType %d jobId %s",
@@ -99,7 +101,7 @@ status_job(mbdReqType reqType,
     statusReq.queuePreCmd = "";
     statusReq.msgId = jp->delieveredMsgId;
 
-    if ( IS_FINISH(newStatus) ) {
+    if (IS_FINISH(newStatus)) {
         if (jp->maxRusage.mem > jp->runRusage.mem)
             jp->runRusage.mem = jp->maxRusage.mem;
         if (jp->maxRusage.swap > jp->runRusage.swap)
@@ -109,14 +111,34 @@ status_job(mbdReqType reqType,
         if (jp->maxRusage.utime > jp->runRusage.utime)
             jp->runRusage.utime = jp->maxRusage.utime;
     }
-    statusReq.runRusage.mem = jp->runRusage.mem;
-    statusReq.runRusage.swap = jp->runRusage.swap;
-    statusReq.runRusage.utime = jp->runRusage.utime;
-    statusReq.runRusage.stime = jp->runRusage.stime;
-    statusReq.runRusage.npids = jp->runRusage.npids;
-    statusReq.runRusage.pidInfo = jp->runRusage.pidInfo;
-    statusReq.runRusage.npgids = jp->runRusage.npgids;
-    statusReq.runRusage.pgid = jp->runRusage.pgid;
+
+    /* Nullify otherwise the following free
+     * will messed up memory if there is no blaunch
+     */
+    jru = NULL;
+    if ((bjru = get_blaunch_jrusage())) {
+
+        jru = merge_jrusage(&jp->runRusage, bjru);
+
+        statusReq.runRusage.mem = jru->mem;
+        statusReq.runRusage.swap = jru->swap;
+        statusReq.runRusage.utime = jru->utime;
+        statusReq.runRusage.stime = jru->stime;
+        statusReq.runRusage.npids = jru->npids;
+        statusReq.runRusage.pidInfo = jru->pidInfo;
+        statusReq.runRusage.npgids = jru->npgids;
+        statusReq.runRusage.pgid = jru->pgid;
+
+    } else {
+        statusReq.runRusage.mem = jp->runRusage.mem;
+        statusReq.runRusage.swap = jp->runRusage.swap;
+        statusReq.runRusage.utime = jp->runRusage.utime;
+        statusReq.runRusage.stime = jp->runRusage.stime;
+        statusReq.runRusage.npids = jp->runRusage.npids;
+        statusReq.runRusage.pidInfo = jp->runRusage.pidInfo;
+        statusReq.runRusage.npgids = jp->runRusage.npgids;
+        statusReq.runRusage.pgid = jp->runRusage.pgid;
+    }
     statusReq.actStatus = jp->actStatus;
     statusReq.sigValue  = jp->jobSpecs.actValue;
     statusReq.seq = seq;
@@ -127,9 +149,9 @@ status_job(mbdReqType reqType,
     len = 1024 +
         ALIGNWORD_(sizeof (struct statusReq));
 
-    len += ALIGNWORD_(strlen (statusReq.execHome)) + 4 +
-        ALIGNWORD_(strlen (statusReq.execCwd)) + 4 +
-        ALIGNWORD_(strlen (statusReq.execUsername)) + 4;
+    len += ALIGNWORD_(strlen(statusReq.execHome) + 1) + 4 +
+        ALIGNWORD_(strlen(statusReq.execCwd) + 1) + 4 +
+        ALIGNWORD_(strlen(statusReq.execUsername) + 1) + 4;
 
     for (i = 0; i < statusReq.runRusage.npids; i++)
         len += ALIGNWORD_(sizeof (struct pidInfo)) + 4;
@@ -149,7 +171,11 @@ status_job(mbdReqType reqType,
     initLSFHeader_(&hdr);
     hdr.opCode = reqType;
 
-    if (!xdr_encodeMsg (&xdrs, (char *)&statusReq, &hdr, xdr_statusReq, 0,
+    if (!xdr_encodeMsg (&xdrs,
+                        (char *)&statusReq,
+                        &hdr,
+                        xdr_statusReq,
+                        0,
                         auth)) {
         ls_syslog(LOG_ERR, I18N_JOB_FAIL_S_M,
                   fname, lsb_jobid2str(jp->jobSpecs.jobId), "xdr_statusReq");
@@ -200,6 +226,7 @@ status_job(mbdReqType reqType,
     lastHost[0] = '\0';
     xdr_destroy(&xdrs);
     FREEUP(request_buf);
+    free_jrusage(&jru);
 
     if (cc)
         free(reply_buf);

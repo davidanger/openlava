@@ -317,7 +317,10 @@ typedef enum {
     SBD_JOB_SETUP   = 100,
     SBD_SYSLOG      = 101,
     CMD_SBD_REBOOT   = 300,
-    CMD_SBD_SHUTDOWN = 301,
+    CMD_SBD_SHUTDOWN = 301
+    /* In lsbatch.h see  sbd_lib_opcode_t for library
+     * to SBD protocol code.
+     */
 } sbdReqType;
 
 

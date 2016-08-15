@@ -1,4 +1,5 @@
-/* $Id: lib.rtask.c 397 2007-11-26 19:04:00Z mblack $
+/*
+ * Copyright (C) 2016 David Bigagali
  * Copyright (C) 2007 Platform Computing Inc
  *
  * This program is free software; you can redistribute it and/or modify
@@ -64,25 +65,25 @@ ls_rtaske(char *host, char **argv, int options, char **envp)
     if (!reg_ls_donerex) {
 
         atexit( (void (*) ()) ls_donerex);
- 	reg_ls_donerex = TRUE;
+        reg_ls_donerex = TRUE;
     }
 
     if (_isconnected_(host, descriptor))
-	s = descriptor[0];
+        s = descriptor[0];
     else if ((s = ls_connect(host)) < 0)
-	return -1;
+        return -1;
 
     if (blockALL_SIGS_(&newMask, &oldMask) < 0)
         return -1;
 
     if (!FD_ISSET(s,&connection_ok_)){
-	FD_SET(s,&connection_ok_);
-	if (ackReturnCode_(s) < 0){
-	    closesocket(s);
-	    _lostconnection_(host);
-	    sigprocmask(SIG_SETMASK, &oldMask, NULL);
-	    return -1;
-	}
+        FD_SET(s,&connection_ok_);
+        if (ackReturnCode_(s) < 0){
+            closesocket(s);
+            _lostconnection_(host);
+            sigprocmask(SIG_SETMASK, &oldMask, NULL);
+            return -1;
+        }
     }
 
     if (!nios_ok_)
@@ -91,10 +92,10 @@ ls_rtaske(char *host, char **argv, int options, char **envp)
 
     cmdmsg.options = options;
     if (cmdmsg.options & REXF_SHMODE)
-	cmdmsg.options |= REXF_USEPTY;
+        cmdmsg.options |= REXF_USEPTY;
 
     if (!isatty(0) && !isatty(1))
-	cmdmsg.options &= ~REXF_USEPTY;
+        cmdmsg.options &= ~REXF_USEPTY;
     else if (cmdmsg.options & REXF_USEPTY ){
         if (options & REXF_TTYASYNC){
             if (rstty_async_(host) < 0) {
@@ -102,7 +103,7 @@ ls_rtaske(char *host, char **argv, int options, char **envp)
                 return -1;
             }
         } else {
-	    if (rstty_(host) < 0) {
+            if (rstty_(host) < 0) {
                 sigprocmask(SIG_SETMASK, &oldMask, NULL);
                 return -1;
             }
@@ -110,9 +111,9 @@ ls_rtaske(char *host, char **argv, int options, char **envp)
     }
 
     if ( (genParams_[LSF_INTERACTIVE_STDERR].paramValue != NULL)
-	 && (strcasecmp(genParams_[LSF_INTERACTIVE_STDERR].paramValue,
-			"y") == 0) ) {
-	cmdmsg.options |= REXF_STDERR;
+         && (strcasecmp(genParams_[LSF_INTERACTIVE_STDERR].paramValue,
+                        "y") == 0) ) {
+        cmdmsg.options |= REXF_STDERR;
     }
 
     if (!nios_ok_) {
@@ -214,14 +215,15 @@ ls_rtaske(char *host, char **argv, int options, char **envp)
     if (rexcwd_[0] != '\0')
         strcpy(cmdmsg.cwd, rexcwd_);
     else if (mygetwd_(cmdmsg.cwd) == 0) {
-	closesocket(s);
-	_lostconnection_(host);
+        closesocket(s);
+        _lostconnection_(host);
         lserrno = LSE_WDIR;
         sigprocmask(SIG_SETMASK, &oldMask, NULL);
         return -1;
     }
 
-
+    /* This is the taskid
+     */
     rpid++;
 
     cmdmsg.rpid = rpid;
@@ -231,29 +233,29 @@ ls_rtaske(char *host, char **argv, int options, char **envp)
     cmdmsg.priority = 0;
 
     if (sendCmdBill_(s, (resCmd) RES_EXEC, &cmdmsg, NULL, NULL) == -1) {
-	closesocket(s);
-	_lostconnection_(host);
+        closesocket(s);
+        _lostconnection_(host);
         sigprocmask(SIG_SETMASK, &oldMask, NULL);
-	return -1;
+        return -1;
     }
 
     if (cmdmsg.options & REXF_TASKPORT) {
 
-	if ((taskPort = getTaskPort(s)) == 0) {
-	    closesocket(s);
-	    _lostconnection_(host);
+        if ((taskPort = getTaskPort(s)) == 0) {
+            closesocket(s);
+            _lostconnection_(host);
             sigprocmask(SIG_SETMASK, &oldMask, NULL);
-	    return -1;
-	}
+            return -1;
+        }
     }
 
     len = sizeof(sin);
     if (getpeername(s, (struct sockaddr *) &sin, &len) <0) {
-	closesocket(s);
-	_lostconnection_(host);
-	lserrno = LSE_SOCK_SYS;
+        closesocket(s);
+        _lostconnection_(host);
+        lserrno = LSE_SOCK_SYS;
         sigprocmask(SIG_SETMASK, &oldMask, NULL);
-	return -1;
+        return -1;
     }
 
     SET_LSLIB_NIOS_HDR(taskReq.hdr, LIB_NIOS_RTASK, sizeof(taskReq.r));
@@ -263,25 +265,102 @@ ls_rtaske(char *host, char **argv, int options, char **envp)
     taskReq.r.pid = (niosOptions & REXF_SYNCNIOS)? -rpid : rpid;
 
     if (b_write_fix(cli_nios_fd[0], (char *) &taskReq, sizeof(taskReq))
-	!= sizeof(taskReq)) {
-	closesocket(s);
-	_lostconnection_(host);
-	lserrno = LSE_MSG_SYS;
+        != sizeof(taskReq)) {
+        closesocket(s);
+        _lostconnection_(host);
+        lserrno = LSE_MSG_SYS;
         sigprocmask(SIG_SETMASK, &oldMask, NULL);
-	return -1;
+        return -1;
     }
 
     if (tid_register(rpid, s, taskPort, host, options & REXF_TASKINFO) == -1) {
-	closesocket(s);
-	_lostconnection_(host);
-	lserrno = LSE_MALLOC;
+        closesocket(s);
+        _lostconnection_(host);
+        lserrno = LSE_MALLOC;
         sigprocmask(SIG_SETMASK, &oldMask, NULL);
-	return -1;
+        return -1;
     }
 
     sigprocmask(SIG_SETMASK, &oldMask, NULL);
 
-    return (rpid);
+    return rpid;
+}
+
+/* ls_getrpid()
+ */
+int
+ls_getrpid(int taskid, pid_t *pid)
+{
+    struct resPid pidReq;
+    struct resPid pidReply;
+    int s;
+    struct tid *tid;
+    char host[MAXHOSTNAMELEN];
+    char buf[RES_PID_BUF];
+    char *rep_buf;
+    XDR xdrs;
+    struct LSFHeader hdr;
+
+    if ((tid = tid_find(taskid)) == NULL) {
+        lserrno = LSE_BAD_TASKF;
+        return -1;
+    }
+
+    s = tid->sock;
+    gethostbysock_(s, host);
+
+    if (! FD_ISSET(s,&connection_ok_)){
+        FD_SET(s,&connection_ok_);
+        if (ackReturnCode_(s) < 0) {
+            closesocket(s);
+            _lostconnection_(host);
+            lserrno = LSE_SOCK_SYS;
+            return -1;
+        }
+    }
+
+    pidReq.rpid = taskid;
+    pidReq.pid = -1;
+
+    if (callRes_(s,
+                 RES_GETPID,
+                 (char *)&pidReq,
+                 (char *)&buf,
+                 sizeof(buf),
+                 xdr_resGetpid,
+                 NULL,
+                 0,
+                 NULL) == -1) {
+        closesocket(s);
+        _lostconnection_(host);
+        lserrno = LSE_SOCK_SYS;
+        return -1;
+    }
+
+    /* Translate res code and return the
+     * LSF Header
+     */
+    if (ackReturnCode2_(s, &hdr, &rep_buf) < 0) {
+        close(s);
+        _lostconnection_(host);
+        lserrno = LSE_SOCK_SYS;
+        return -1;
+    }
+
+    xdrmem_create(&xdrs, rep_buf, hdr.length, XDR_DECODE);
+
+    if (! xdr_resGetpid(&xdrs, &pidReply, NULL)) {
+        lserrno = LSE_BAD_XDR;
+        xdr_destroy(&xdrs);
+        lserrno = LSE_BAD_XDR;
+        return -1;
+    }
+
+    *pid = pidReply.pid;
+    xdr_destroy(&xdrs);
+    _free_(rep_buf);
+
+    return LSE_NO_ERR;
 }
 
 int
@@ -294,13 +373,13 @@ rgetpidCompletionHandler_(struct lsRequest *request)
 
     rc = resRC2LSErr_(request->rc);
     if (rc != 0)
-	return -1;
+        return -1;
 
     xdrmem_create(&xdrs, request->replyBuf, sizeof(struct resPid), XDR_DECODE);
     if (! xdr_resGetpid(&xdrs, &pidReply, NULL)) {
-	lserrno = LSE_BAD_XDR;
-	xdr_destroy(&xdrs);
-	return -1;
+        lserrno = LSE_BAD_XDR;
+        xdr_destroy(&xdrs);
+        return -1;
     }
 
     *((int *)request->extra) = pidReply.pid;
@@ -310,14 +389,13 @@ rgetpidCompletionHandler_(struct lsRequest *request)
 }
 
 void *
-lsRGetpidAsync_(int taskid, int *pid)
+lsRGetpidAsyncsss_(int taskid, int *pid)
 {
     struct _buf_ {
-	struct LSFHeader hdrBuf;
-	struct resPid pidBuf;
+        struct LSFHeader hdrBuf;
+        struct resPid pidBuf;
     } buf;
     LS_REQUEST_T *request;
-
     struct resPid pidReq;
     int s;
     struct tid *tid;
@@ -343,7 +421,7 @@ lsRGetpidAsync_(int taskid, int *pid)
     pidReq.pid = -1;
 
     if (callRes_(s, RES_GETPID, (char *) &pidReq, (char *) &buf,
-		 sizeof(buf), xdr_resGetpid, 0, 0, NULL) == -1) {
+                 sizeof(buf), xdr_resGetpid, 0, 0, NULL) == -1) {
         closesocket(s);
         _lostconnection_(host);
         return NULL;
@@ -351,12 +429,12 @@ lsRGetpidAsync_(int taskid, int *pid)
 
 
     request = lsReqHandCreate_(taskid,
-			       currentSN,
-			       s,
-			       (void *)pid,
-			       rgetpidCompletionHandler_,
-			       (appCompletionHandler) NULL,
-			       NULL);
+                               currentSN,
+                               s,
+                               (void *)pid,
+                               rgetpidCompletionHandler_,
+                               (appCompletionHandler) NULL,
+                               NULL);
 
     if (request != NULL)
         if (lsQueueDataAppend_((char *)request, requestQ))
@@ -370,8 +448,8 @@ int
 lsRGetpid_(int taskid, int options)
 {
     struct _buf_ {
-	struct LSFHeader hdrBuf;
-	struct resPid pidBuf;
+        struct LSFHeader hdrBuf;
+        struct resPid pidBuf;
     } buf;
     LS_REQUEST_T *request;
     int pid;
@@ -401,19 +479,19 @@ lsRGetpid_(int taskid, int options)
     pidReq.pid = -1;
 
     if (callRes_(s, RES_GETPID, (char *) &pidReq, (char *) &buf,
-		 sizeof(buf), xdr_resGetpid, 0, 0, NULL) == -1) {
+                 sizeof(buf), xdr_resGetpid, 0, 0, NULL) == -1) {
         closesocket(s);
         _lostconnection_(host);
         return -1;
     }
 
     request = lsReqHandCreate_(taskid,
-			       currentSN,
-			       s,
-			       (void *)&pid,
-			       rgetpidCompletionHandler_,
-			       (appCompletionHandler) NULL,
-			       NULL);
+                               currentSN,
+                               s,
+                               (void *)&pid,
+                               rgetpidCompletionHandler_,
+                               (appCompletionHandler) NULL,
+                               NULL);
 
     if (request == NULL)
         return -1;
@@ -434,8 +512,8 @@ int
 lsRGetpgrp_(int sock, int taskid, int pid)
 {
     struct _buf_ {
-	struct LSFHeader hdrBuf;
-	struct resPid pidBuf;
+        struct LSFHeader hdrBuf;
+        struct resPid pidBuf;
     } buf;
     LS_REQUEST_T *request;
     char host[MAXHOSTNAMELEN];
@@ -459,19 +537,19 @@ lsRGetpgrp_(int sock, int taskid, int pid)
     pidReq.pid = pid;
 
     if (callRes_(s, RES_GETPID, (char *) &pidReq, (char *) &buf,
-		 sizeof(buf), xdr_resGetpid, 0, 0, NULL) == -1) {
+                 sizeof(buf), xdr_resGetpid, 0, 0, NULL) == -1) {
         closesocket(s);
         _lostconnection_(host);
         return -1;
     }
 
     request = lsReqHandCreate_(taskid,
-			       currentSN,
-			       s,
-			       (void *)&pgid,
-			       rgetpidCompletionHandler_,
-			       (appCompletionHandler) NULL,
-			       NULL);
+                               currentSN,
+                               s,
+                               (void *)&pgid,
+                               rgetpidCompletionHandler_,
+                               (appCompletionHandler) NULL,
+                               NULL);
 
     if (request == NULL)
         return -1;

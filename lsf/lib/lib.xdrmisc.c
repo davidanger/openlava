@@ -1,4 +1,5 @@
-/* $Id: lib.xdrmisc.c 397 2007-11-26 19:04:00Z mblack $
+/*
+ * Copyright (C) 2016 David Bigagli
  * Copyright (C) 2007 Platform Computing Inc
  *
  * This program is free software; you can redistribute it and/or modify
@@ -22,7 +23,7 @@
 #include "lproto.h"
 
 bool_t
-xdr_LSFlong (XDR *xdrs, long *l)
+xdr_LSFlong(XDR *xdrs, long *l)
 {
     struct {
         int high;
@@ -372,7 +373,7 @@ xdr_pidInfo(XDR *xdrs, struct pidInfo *pidInfo, struct LSFHeader *hdr)
 }
 
 bool_t
-xdr_jRusage (XDR *xdrs, struct jRusage *runRusage, struct LSFHeader *hdr)
+xdr_jRusage(XDR *xdrs, struct jRusage *runRusage, struct LSFHeader *hdr)
 {
     int i;
 
@@ -387,12 +388,11 @@ xdr_jRusage (XDR *xdrs, struct jRusage *runRusage, struct LSFHeader *hdr)
         runRusage->pgid = NULL;
     }
 
-    if (!(xdr_int(xdrs, &runRusage->mem) &&
-          xdr_int(xdrs, &runRusage->swap) &&
-          xdr_int(xdrs, &runRusage->utime) &&
-          xdr_int(xdrs, &runRusage->stime)))
+    if (! xdr_int(xdrs, &runRusage->mem)
+        || ! xdr_int(xdrs, &runRusage->swap)
+        || ! xdr_int(xdrs, &runRusage->utime)
+        || ! xdr_int(xdrs, &runRusage->stime))
         return false;
-
 
 
     if (!(xdr_int(xdrs, &runRusage->npids)))
@@ -407,7 +407,10 @@ xdr_jRusage (XDR *xdrs, struct jRusage *runRusage, struct LSFHeader *hdr)
     }
 
     for (i = 0; i < runRusage->npids; i++) {
-        if (!xdr_arrayElement(xdrs, (char *) &(runRusage->pidInfo[i]), hdr, xdr_pidInfo)) {
+        if (!xdr_arrayElement(xdrs,
+                              (char *) &(runRusage->pidInfo[i]),
+                              hdr,
+                              xdr_pidInfo)) {
             if (xdrs->x_op == XDR_DECODE)  {
                 FREEUP(runRusage->pidInfo);
                 runRusage->npids = 0;
@@ -421,7 +424,7 @@ xdr_jRusage (XDR *xdrs, struct jRusage *runRusage, struct LSFHeader *hdr)
         return false;
 
     if (xdrs->x_op == XDR_DECODE && runRusage->npgids) {
-        runRusage->pgid = (int *) calloc (runRusage->npgids, sizeof(int));
+        runRusage->pgid = calloc(runRusage->npgids, sizeof(int));
         if (runRusage->pgid == NULL) {
             runRusage->npgids = 0;
             return false;
@@ -444,3 +447,4 @@ xdr_jRusage (XDR *xdrs, struct jRusage *runRusage, struct LSFHeader *hdr)
     }
     return true;
 }
+
