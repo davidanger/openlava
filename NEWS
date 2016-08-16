@@ -4,6 +4,7 @@ Release notes for OpenLava versions
            ^
            |
            |
+-- Added the blaunch.1 man page in the batch man section.
 -- Developed new API ls_getrpid() to get a remote process id of a task
    started by RES knowing the local taskid.
 -- Developed new API lsb_launch() to start a components of parallel jobs.
