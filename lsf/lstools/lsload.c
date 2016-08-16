@@ -1,4 +1,5 @@
-/* $Id: lsload.c 397 2007-11-26 19:04:00Z mblack $
+/*
+ * Copyright (C) 2016 David Bigagli
  * Copyright (C) 2007 Platform Computing Inc
  *
  * This program is free software; you can redistribute it and/or modify
@@ -32,10 +33,10 @@ extern char **filterToNames(char *);
 extern int num_loadindex;
 
 void
-usage(char *cmd)
+usage(static char *cmd)
 {
     fprintf(stderr,"Usage:\n%s [-h] [-V] [-N|-E] [-l] [-R res_req] [-I index_list] [-n num_hosts] [host_name ... | cluster_name ...]\n", cmd);
-   fprintf(stderr, "or\n%s [-h] [-V] -s [ shared_resource_name ... ]\n", cmd);
+    fprintf(stderr, "or\n%s [-h] [-V] -s [ shared_resource_name ... ]\n", cmd);
 }
 
 int
@@ -52,7 +53,7 @@ main(int argc, char **argv)
     char **nlp;
     static char *defaultindex[] = {"r15s", "r1m", "r15m", "ut", "pg", "ls",
                                    "it", "tmp", "swp", "mem", NULL};
-    int	achar;
+    int achar;
     char longFormat = FALSE;
     char wideFormat = FALSE;
     char badHost = FALSE, sOption = FALSE, otherOption = FALSE;
@@ -70,30 +71,30 @@ main(int argc, char **argv)
     }
 
     for (i = 1; i < argc; i++) {
-       if (strcmp(argv[i], "-h") == 0) {
-           usage(argv[0]);
-           exit (0);
-       } else if (strcmp(argv[i], "-V") == 0) {
-           fputs(_LS_VERSION_, stderr);
-           exit(0);
-       } else if (strcmp(argv[i], "-s") == 0) {
-           if (otherOption == TRUE) {
-               usage(argv[0]);
-               exit(-1);
-           }
-           sOption = TRUE;
-           optind = i + 1;
-       } else if (strcmp(argv[i], "-e") == 0) {
-           if (otherOption == TRUE || sOption == FALSE) {
-               usage(argv[0]);
-               exit(-1);
-           }
-           extView = TRUE;
-           optind = i + 1;
-       } else if (strcmp(argv[i], "-R") == 0 || strcmp(argv[i], "-l") == 0
-                  || strcmp(argv[i], "-I") == 0 || strcmp(argv[i], "-N") == 0
-                  || strcmp(argv[i], "-E") == 0 || strcmp(argv[i], "-n") == 0
-		  || strcmp(argv[i], "-w") == 0 ) {
+        if (strcmp(argv[i], "-h") == 0) {
+            usage(argv[0]);
+            exit (0);
+        } else if (strcmp(argv[i], "-V") == 0) {
+            fputs(_LS_VERSION_, stderr);
+            exit(0);
+        } else if (strcmp(argv[i], "-s") == 0) {
+            if (otherOption == TRUE) {
+                usage(argv[0]);
+                exit(-1);
+            }
+            sOption = TRUE;
+            optind = i + 1;
+        } else if (strcmp(argv[i], "-e") == 0) {
+            if (otherOption == TRUE || sOption == FALSE) {
+                usage(argv[0]);
+                exit(-1);
+            }
+            extView = TRUE;
+            optind = i + 1;
+        } else if (strcmp(argv[i], "-R") == 0 || strcmp(argv[i], "-l") == 0
+                   || strcmp(argv[i], "-I") == 0 || strcmp(argv[i], "-N") == 0
+                   || strcmp(argv[i], "-E") == 0 || strcmp(argv[i], "-n") == 0
+                   || strcmp(argv[i], "-w") == 0 ) {
             otherOption = TRUE;
             if (sOption == TRUE) {
                 usage(argv[0]);
@@ -108,50 +109,50 @@ main(int argc, char **argv)
     }
 
     while ((achar = getopt(argc, argv, "R:I:NEln:w")) != EOF) {
-	switch (achar) {
-	case 'R':
-            resreq = optarg;
-            break;
-	case 'I':
-            indexfilter = optarg;
-            break;
+        switch (achar) {
+            case 'R':
+                resreq = optarg;
+                break;
+            case 'I':
+                indexfilter = optarg;
+                break;
 
-	case 'N':
-	    if (options & EFFECTIVE)
-		usage(argv[0]);
-            options = NORMALIZE;
-	    break;
+            case 'N':
+                if (options & EFFECTIVE)
+                    usage(argv[0]);
+                options = NORMALIZE;
+                break;
 
-        case 'E':
-	    if (options & NORMALIZE)
-		usage(argv[0]);
-             options = EFFECTIVE;
-	     break;
-	case 'n':
-            numneeded = atoi(optarg);
-            if (numneeded <= 0)
+            case 'E':
+                if (options & NORMALIZE)
+                    usage(argv[0]);
+                options = EFFECTIVE;
+                break;
+            case 'n':
+                numneeded = atoi(optarg);
+                if (numneeded <= 0)
+                    usage(argv[0]);
+                break;
+
+            case 'l':
+                longFormat = TRUE;
+                if (wideFormat == TRUE)
+                    usage(argv[0]);
+                break;
+
+            case 'w':
+                wideFormat = TRUE;
+                if (longFormat == TRUE)
+                    usage(argv[0]);
+                break;
+
+            case 'V':
+                fputs(_LS_VERSION_, stderr);
+                exit(0);
+
+            case 'h':
+            default:
                 usage(argv[0]);
-            break;
-
-        case 'l':
-	    longFormat = TRUE;
-	    if (wideFormat == TRUE)
-		usage(argv[0]);
-	    break;
-
-	case 'w':
-	    wideFormat = TRUE;
-	    if (longFormat == TRUE)
-		usage(argv[0]);
-	    break;
-
-	case 'V':
-	    fputs(_LS_VERSION_, stderr);
-	    exit(0);
-
-	case 'h':
-	default:
-            usage(argv[0]);
 
         }
     }
@@ -163,16 +164,16 @@ main(int argc, char **argv)
             exit(-1);
         }
         if ( (isClus = ls_isclustername(argv[optind])) < 0 ) {
-	    fprintf(stderr, "lsload: %s\n", ls_sysmsg());
+            fprintf(stderr, "lsload: %s\n", ls_sysmsg());
             badHost = TRUE;
-	    continue;
-	} else if ( (isClus == 0) &&
-		    (!Gethostbyname_(argv[optind])) ) {
-	    fprintf(stderr, "\
+            continue;
+        } else if ( (isClus == 0) &&
+                    (!Gethostbyname_(argv[optind])) ) {
+            fprintf(stderr, "\
 %s: invalid hostname %s\n", __func__, argv[optind]);
             badHost = TRUE;
             continue;
-	}
+        }
         hostnames[num] = argv[optind];
         num++;
     }
@@ -197,15 +198,15 @@ main(int argc, char **argv)
                                    num,
                                    &nlp)), "ls_loadinfo");
     if (!hosts) {
-	ls_perror("lsload");
+        ls_perror("lsload");
         exit(-10);
     }
 
     if (longFormat)
         printf("%s", formatHeader(nlp, longFormat));
     else
-	if (wideFormat)
-	    printf("%s\n", wideformatHeader(nlp, longFormat));
+        if (wideFormat)
+            printf("%s\n", wideformatHeader(nlp, longFormat));
         else
             printf("%s\n", formatHeader(nlp, longFormat));
 
@@ -216,48 +217,48 @@ main(int argc, char **argv)
     }
 
     for (i = 0;i < numneeded; i++) {
-	if (LS_ISUNAVAIL(hosts[i].status))
-	    strcpy(statusbuf, "unavail");
-	else {
-	    statusbuf[0] = '\0';
+        if (LS_ISUNAVAIL(hosts[i].status))
+            strcpy(statusbuf, "unavail");
+        else {
+            statusbuf[0] = '\0';
             if (LS_ISRESDOWN(hosts[i].status))
-		strcat(statusbuf, "-");
-	    if (LS_ISOKNRES(hosts[i].status))
-		strcat(statusbuf, "ok");
-	    if (LS_ISLOCKEDU(hosts[i].status) && !LS_ISLOCKEDW(hosts[i].status))
-		strcat(statusbuf, "lockU");
-	    if (LS_ISLOCKEDW(hosts[i].status) && !LS_ISLOCKEDU(hosts[i].status))
-		strcat(statusbuf, "lockW");
-	    if (LS_ISLOCKEDW(hosts[i].status) && LS_ISLOCKEDU(hosts[i].status))
-		strcat(statusbuf, "lockUW");
-	    if (LS_ISBUSY(hosts[i].status) && !LS_ISLOCKED(hosts[i].status))
-		strcat(statusbuf, "busy");
-	}
+                strcat(statusbuf, "-");
+            if (LS_ISOKNRES(hosts[i].status))
+                strcat(statusbuf, "ok");
+            if (LS_ISLOCKEDU(hosts[i].status) && !LS_ISLOCKEDW(hosts[i].status))
+                strcat(statusbuf, "lockU");
+            if (LS_ISLOCKEDW(hosts[i].status) && !LS_ISLOCKEDU(hosts[i].status))
+                strcat(statusbuf, "lockW");
+            if (LS_ISLOCKEDW(hosts[i].status) && LS_ISLOCKEDU(hosts[i].status))
+                strcat(statusbuf, "lockUW");
+            if (LS_ISBUSY(hosts[i].status) && !LS_ISLOCKED(hosts[i].status))
+                strcat(statusbuf, "busy");
+        }
 
         if (longFormat) {
             retVal = makeShareField(hosts[i].hostName, FALSE, &shareNames,
                                     &shareValues, &formats);
-	    if (i == 0) {
+            if (i == 0) {
 
-		if (retVal > 0) {
+                if (retVal > 0) {
 
-		    for (j = 0; j < retVal; j++) {
-			printf(formats[j], shareNames[j]);
-		    }
-		}
-		putchar('\n');
-	    }
-	    printf("%-23s %6s", hosts[i].hostName, statusbuf);
+                    for (j = 0; j < retVal; j++) {
+                        printf(formats[j], shareNames[j]);
+                    }
+                }
+                putchar('\n');
+            }
+            printf("%-23s %6s", hosts[i].hostName, statusbuf);
         } else
-	    printf("%-15.15s %6s", hosts[i].hostName, statusbuf);
+            printf("%-15.15s %6s", hosts[i].hostName, statusbuf);
 
-	if (!LS_ISUNAVAIL(hosts[i].status)) {
+        if (!LS_ISUNAVAIL(hosts[i].status)) {
             int nf;
-	    if (wideFormat){
-		nf = makewideFields(&hosts[i], loadval, nlp);
-	    }
-	    else
-	    nf = makeFields(&hosts[i], loadval, nlp);
+            if (wideFormat){
+                nf = makewideFields(&hosts[i], loadval, nlp);
+            }
+            else
+                nf = makeFields(&hosts[i], loadval, nlp);
             for(j = 0; j < nf; j++)
                 printf("%s",loadval[j]);
             if (retVal > 0) {
@@ -265,8 +266,8 @@ main(int argc, char **argv)
                     printf(formats[j], shareValues[j]);
                 }
             }
-	}
-	putchar('\n');
+        }
+        putchar('\n');
     }
 
     exit (0);
