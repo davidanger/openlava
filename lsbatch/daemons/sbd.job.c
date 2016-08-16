@@ -259,7 +259,7 @@ sendNotification(struct jobCard *jobCardPtr)
 }
 
 void
-getJobTmpDir( char * tmpDirName, struct jobCard *jPtr)
+getJobTmpDir(char *tmpDirName, struct jobCard *jPtr)
 {
     char jobId[16];
 
@@ -276,7 +276,7 @@ createJobTmpDir(struct jobCard *jobCardPtr)
     char tmpDirName[MAXFILENAMELEN];
     mode_t previousUmask;
 
-    getJobTmpDir((char *)tmpDirName, jobCardPtr );
+    getJobTmpDir(tmpDirName, jobCardPtr);
     previousUmask = umask(077);
 
     if ((mkdir(tmpDirName, 0700) == -1)
@@ -1149,17 +1149,13 @@ finishJob(struct jobCard *jobCard)
         exit(-1);
     }
 
+    getJobTmpDir(tmpDirName, jobCard);
 
-
-
-    getJobTmpDir( (char *) tmpDirName, jobCard );
-
-    if ( rmDirAndFilesEx( tmpDirName, 1  ) != 0 ) {
-        ls_syslog(LOG_DEBUG,
-                  "%s: Fail to  delete TMPDIR=%s directory for job <%s>",
+    if (rmDirAndFilesEx(tmpDirName, 1) != 0 ) {
+        ls_syslog(LOG_DEBUG, "\
+%s: Fail to  delete TMPDIR=%s directory for job <%s>",
                   fname, tmpDirName, lsb_jobid2str(jobCard->jobSpecs.jobId));
     }
-
 
     if (doSendResults) {
         if ( send_results(jobCard) != 0 ) {
