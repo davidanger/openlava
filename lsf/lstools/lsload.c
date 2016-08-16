@@ -33,7 +33,7 @@ extern char **filterToNames(char *);
 extern int num_loadindex;
 
 void
-usage(static char *cmd)
+usage(const char *cmd)
 {
     fprintf(stderr,"Usage:\n%s [-h] [-V] [-N|-E] [-l] [-R res_req] [-I index_list] [-n num_hosts] [host_name ... | cluster_name ...]\n", cmd);
     fprintf(stderr, "or\n%s [-h] [-V] -s [ shared_resource_name ... ]\n", cmd);
