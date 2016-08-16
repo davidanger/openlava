@@ -1,0 +1,91 @@
+.ds ]W %
+.ds ]L
+.nh
+.TH bmig 1 "OpenLava Version 4.0 - Aug 2016"
+.br
+.SH NAME
+\fBblaunch\fR - launches remote parallel tasks on a set of hosts
+.SH SYNOPSIS
+.BR
+.PP
+.PP
+\fBblaunch\fR\fB \fR[\fB-n\fR] [\fB-u\fR \fIhost_file\R | \fB-z\fR \fIhost_name...\fR | \fIhost_name\fR]
+command [argument...]
+.PP
+\fBblaunch \fR[\fB-h\fR | \fB-V\fR]
+.SH DESCRIPTION
+.BR
+.PP
+.PP
+Many parallel applications including MPI implementations use passwordless ssh
+as their launching mechanism. The blaunch command provides an alternative of
+ssh as a transparent method for launching parallel applications within OpenLava.
+.PP
+blaunch supports the following core command line options as ssh: ssh \fIhost_name\fR
+\fIcommand\fR
+.PP
+All other ssh options are not supported.
+.PP
+blaunch transparently connects directly to the RES on the remote host, and
+subsequently creates and tracks the remote tasks, and provides the connection
+back to OpenLava. Full job process resource usage is monitored and collected by
+blaunch, and can be viewed via \fIbjobs -l\fR.
+.PP
+blaunch only works under OpenLava. It can only be used to launch tasks
+on remote hosts that are part of a job allocation. It cannot be used
+as a standalone command.
+.SH OPTIONS
+.BR
+.PP
+.TP 
+\fB-n
+\fR
+.IP
+Standard input is taken from /dev/null.
+.TP 
+\fB-u\fR \fIhost_file\fR
+.IP
+Executes the task on all hosts listed in the \fIhost_file\fR.
+.IP
+Specify the path to the file that contains a list of host names.
+Each host name must be listed on a separate line in the host list file.
+.IP
+This option is exclusive of the -z option.
+.TP
+\fIhost_name\fR
+.IP
+The name of the host where remote tasks are to be launched.
+.TP 
+\fB-z\fR \fhost_name...
+\fR
+.IP
+Executes the task on all specified hosts.
+.IP
+Specify a list of hosts on which to execute the task. If multiple host names are
+specified, the host names must be enclosed by quotation masks (" or ') and
+separated by white space.
+.IP
+This option is exclusive of the -u option.
+.TP 
+\fIcommand\fR [\fIargument...\fR]
+.IP
+Specify the command to execute. This must be the last argument on the command
+line.
+.TP 
+\fB-h
+\fR
+.IP
+Prints command usage to stderr and exits.
+
+
+.TP 
+\fB-V\fR 
+
+.IP
+Prints openlava release version to stderr and exits.
+
+.SH SEE ALSO
+.BR
+.PP
+.PP
+res(8), pim(8) 
