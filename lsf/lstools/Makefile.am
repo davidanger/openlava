@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2011-2014 David Bigagli
+# Copyright (C) 2011-2016 David Bigagli
 #
 
 include $(top_srcdir)/common.mk
@@ -7,7 +7,8 @@ include $(top_srcdir)/common.mk
 AM_CPPFLAGS += -I..
 
 bin_PROGRAMS = lsacct lseligible lshosts lsid lsinfo lsloadadj \
- 		lsload lsplace lsrcp lsrun lsaddhost lsrmhost lsmon lsclusters
+	lsload lsplace lsrcp lsrun lsaddhost lsrmhost lsmon lsclusters \
+	lsgetpid
 
 lsclusters_SOURCES = lsclusters.c
 lsclusters_LDADD = ../lib/.libs/liblsf.a ../intlib/.libs/liblsfint.a -lnsl
@@ -96,5 +97,11 @@ lsrmhost_SOURCES = lsrmhost.c
 lsrmhost_LDADD = ../lib/.libs/liblsf.a  -lnsl
 if SOLARIS
 lsrmhost_LDADD += -lnsl -lsocket
+endif
+
+lsgetpid_SOURCES = lsgetpid.c
+lsgetpid_LDADD = ../intlib/.libs/libtools.a ../intlib/.libs/liblsfint.a ../lib/.libs/liblsf.a  -lnsl
+if SOLARIS
+lsgetpid_LDADD += -lnsl -lsocket
 endif
 

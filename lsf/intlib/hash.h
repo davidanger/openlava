@@ -41,17 +41,17 @@ struct hash_walk {
 
 extern struct hash_tab   *hash_make(int);
 extern void  *hash_lookup(struct hash_tab *,
-			  const char *);
+                          const char *);
 extern struct hash_ent *hash_install(struct hash_tab *,
-				     const char *,
-				     void *,
-				     int *);
+                                     const char *,
+                                     void *,
+                                     int *);
 extern void   *hash_rm(struct hash_tab *,
-		       const char *);
+                       const char *);
 extern void  hash_free(struct hash_tab *,
-		       void (*f)(void *));
+                       void (*f)(void *));
 extern void  hash_walk_start(struct hash_tab *,
-                           struct hash_walk *);
+                             struct hash_walk *);
 extern void  hash_walk_end(struct hash_walk *);
 extern void  *hash_walk(struct hash_walk *);
 

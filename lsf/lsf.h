@@ -114,6 +114,10 @@ extern char **environ;
 # define LS_STATUS(s)   (s)
 #endif
 
+/* Where all the proc information are.
+ */
+#define PROC_DIR "/proc"
+
 typedef enum {
     R15S,
     R1M,
@@ -537,6 +541,10 @@ struct clusterConf {
  */
 #define MAX_PROC_ENT (2 * 1024)
 
+/* These records are used to collect rusage of
+ * processes using PIM or the standalone ls_getprocusage()
+ * API
+ */
 struct pidInfo {
     int pid;
     int ppid;
@@ -553,6 +561,20 @@ struct jRusage {
     struct pidInfo *pidInfo;
     int npgids;
     int *pgid;
+};
+
+/* /proc/pid/stat fields we are interested in. We still use int
+ * for now but 2147483647 this value is no longer enough.
+
+ */
+struct proc_info {
+    int pid;
+    int ppid;
+    int pgid;
+    int mem;
+    int swap;
+    int utime;
+    int stime;
 };
 
 typedef enum {
@@ -1003,6 +1025,7 @@ extern int lsb_rmcgroup_mem(const char *,  pid_t);
  */
 extern int ls_getrpid(int, pid_t *);
 extern struct jRusage *ls_getrusage(int);
+extern struct jRusage *ls_getprocusage(pid_t);
 
 #ifndef __CYGWIN__
 extern int optind;

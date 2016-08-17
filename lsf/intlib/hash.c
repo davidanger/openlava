@@ -83,7 +83,7 @@ hash_make(int size)
  */
 void *
 hash_lookup(struct hash_tab *tab,
-           const char *ukey)
+            const char *ukey)
 {
     unsigned long z;
     struct hash_ent *ent;
@@ -110,9 +110,9 @@ hash_lookup(struct hash_tab *tab,
  */
 struct hash_ent *
 hash_install(struct hash_tab *tab,
-	     const char *key,
-	     void *e,
-	     int  *dup)
+             const char *key,
+             void *e,
+             int  *dup)
 {
     unsigned long z;
     struct hash_ent *ent;
@@ -156,7 +156,7 @@ hash_install(struct hash_tab *tab,
  */
 void *
 hash_rm(struct hash_tab *tab,
-	const char *ukey)
+        const char *ukey)
 {
     struct hash_ent *ent;
     unsigned long z;
@@ -190,7 +190,7 @@ hash_rm(struct hash_tab *tab,
  */
 static void
 re_hash(struct hash_tab *tab,
-	int size)
+        int size)
 {
     struct list_ **L;
     int c;
@@ -232,7 +232,7 @@ re_hash(struct hash_tab *tab,
  */
 void
 hash_free(struct hash_tab *tab,
-	  void (*f)(void *))
+          void (*f)(void *))
 {
     int c;
 
@@ -244,7 +244,7 @@ hash_free(struct hash_tab *tab,
 
         while ((ent = (struct hash_ent *)listpop(tab->v[c]))) {
 
-	    if (f)
+            if (f)
                 (*f)(ent->e);
 
             free(ent->key);
@@ -286,7 +286,7 @@ primesz(int c)
  */
 void
 hash_walk_start(struct hash_tab  *tab,
-		struct hash_walk *w)
+                struct hash_walk *w)
 {
     if (!w)
         return;
@@ -319,8 +319,8 @@ hash_walk(struct hash_walk *w)
 
         L = w->tab->v[w->z];
 
-	/* empty slot
-	 */
+        /* empty slot
+         */
         if (L == NULL
             || LIST_NUM_ENTS(L) == 0) {
             w->z++;

@@ -12,3 +12,4 @@ lsrun
 lsaddhost
 lsrmhost
 lsclusters
+lsgetpid
