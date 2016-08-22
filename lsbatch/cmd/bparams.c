@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 David Bigagli
+ * Copyright (C) 2015 - 2016 David Bigagli
  * Copyright (C) 2007 Platform Computing Inc
  *
  * This program is free software; you can redistribute it and/or modify
@@ -90,7 +90,6 @@ Job Accepting Interval:  %d seconds\n",
 static void
 printLong(struct parameterInfo *reply)
 {
-
     printf("System default queues for automatic queue selection:\n");
     printf(" %16.16s = %s\n\n",  "DEFAULT_QUEUE", reply->defaultQueues);
 
@@ -164,22 +163,18 @@ The maximum number of finished jobs that can be stored in current events file:\n
         printf("    JOB_DEP_LAST_SUB = %d \n\n", reply->jobDepLastSub);
     }
 
-
     printf("The Maximum JobId defined in the system:\n");
     printf("    MAX_JOBID = %d\n\n", reply->maxJobId);
-
 
     if (reply->maxAcctArchiveNum > 0) {
         printf("Max number of Acct files:\n");
         printf(" %24s = %d\n\n", "MAX_ACCT_ARCHIVE_FILE", reply->maxAcctArchiveNum);
     }
 
-
     if (reply->acctArchiveInDays > 0) {
         printf("Mbatchd Archive Interval:\n");
         printf(" %19s = %d days\n\n", "ACCT_ARCHIVE_AGE", reply->acctArchiveInDays);
     }
-
 
     if (reply->acctArchiveInSize > 0) {
         printf("Mbatchd Archive threshold:\n");
@@ -212,4 +207,11 @@ The maximum number of finished jobs that can be stored in current events file:\n
         printf("Absolute Runtime\n");
         printf("    ABS_RUNTIME is enabled.\n\n");
     }
+
+    /* If enabled then mbatchd will preempt jobs based on queue
+     * priority and resource usage rather then slots.
+     */
+    printf("Preemptable resources\n");
+    printf("    PREEMPTABLE_RESOURCES = %s\n\n", reply->preemptableResources);
+
 }

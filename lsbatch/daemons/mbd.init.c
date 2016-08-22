@@ -2005,12 +2005,18 @@ setParams(struct paramConf *paramConf)
      * we don't.
      */
     mbdParams->run_abs_limit = params->run_abs_limit;
+
+    /* If defined in lsb.params then mbatchd preempts based on this
+     * specified resources instead of slots.
+     */
+    if (params->preemptableResources)
+        mbdParams->preemptableResources = strdup(params->preemptableResources);
+
 }
 
 static void
-addUData (struct userConf *userConf)
+addUData(struct userConf *userConf)
 {
-    static char fname[] = "addUData";
     struct userInfoEnt *uPtr;
     int i;
 
@@ -2018,7 +2024,7 @@ addUData (struct userConf *userConf)
     for (i = 0; i < userConf->numUsers; i++) {
         uPtr = &(userConf->users[i]);
         addUserData(uPtr->user, uPtr->maxJobs, uPtr->procJobLimit,
-                    fname, TRUE, TRUE);
+                    (char *)__func__, TRUE, TRUE);
         if (strcmp ("default", uPtr->user) == 0)
             defUser = TRUE;
     }

@@ -496,6 +496,9 @@ xdr_parameterInfo(XDR *xdrs,
     if (! xdr_int(xdrs, &paramInfo->run_abs_limit))
         return false;
 
+    if (! xdr_var_string(xdrs, &paramInfo->preemptableResources))
+        return false;
+
     return true;
 }
 

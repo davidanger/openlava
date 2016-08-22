@@ -4,6 +4,10 @@ Release notes for OpenLava versions
            ^
            |
            |
+-- Added lsb.params PREEMPTABLE_RESOURCES parameters. This enable resource
+   preemption in MBD If this parameter is configured the queue preemption
+   is done based on the specified resources and not by the host slots which is
+   the default.
 -- Added the blaunch.1 man page in the batch man section.
 -- Developed new API ls_getrpid() to get a remote process id of a task
    started by RES knowing the local taskid.

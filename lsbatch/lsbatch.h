@@ -898,6 +898,7 @@ struct parameterInfo {
     int disable_peer_jobs;
     int hist_mins;
     int run_abs_limit; /* if specificied -W is not scaled */
+    char *preemptableResources; /* resource based queue preemption */
 };
 
 

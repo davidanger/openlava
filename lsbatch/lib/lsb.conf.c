@@ -122,7 +122,7 @@ static void initQueueInfo(struct queueInfoEnt *);
 static void freeQueueInfo(struct queueInfoEnt *);
 static void freeLimitInfo(struct resLimit *);
 
-int checkSpoolDir(char *spoolDir);
+int checkSpoolDir(char *);
 int checkJobAttaDir(char *);
 void freeWorkUser(int);
 void freeWorkHost(int);
@@ -326,13 +326,14 @@ lsb_readparam(struct lsConf *conf)
     fname = conf->confhandle->fname;
 
     if ((pConf->param = calloc(1, sizeof(struct parameterInfo))) == NULL) {
-        ls_syslog(LOG_ERR, I18N_FUNC_D_FAIL_M, __func__, "malloc",
-                  sizeof(struct parameterInfo));
+        ls_syslog(LOG_ERR, "\
+%s: calloc() oparameterInfo size %d failed %s", __func__, sizeof(struct parameterInfo));
         lsberrno = LSBE_CONF_FATAL;
         return NULL;
     }
 
-    /* Initialize all parameters
+    /* Initialize all parameters what is not initialized is
+     * NULL because of calloc().
      */
     initParameterInfo(pConf->param);
 
@@ -381,7 +382,8 @@ static char
 do_Param(struct lsConf *conf, char *fname, int *lineNum)
 {
     char *linep;
-    int i, value;
+    int i;
+    int value;
 
     struct keymap keylist[] = {
         {"LSB_MANAGER", NULL, 0},         /* 0 */
@@ -426,6 +428,7 @@ do_Param(struct lsConf *conf, char *fname, int *lineNum)
         {"DISABLE_PEER_JOBS", NULL, 0},     /* 39 */
         {"HIST_MINUTES", NULL, 0},          /* 40 */
         {"ABS_RUNLIMIT", NULL, 0},          /* 41 */
+        {"PREEMPTABLE_RESOURCES", NULL, 0}, /* 42 */
         {NULL, NULL, 0}
     };
 
@@ -657,6 +660,9 @@ do_Param(struct lsConf *conf, char *fname, int *lineNum)
                 pConf->param->run_abs_limit = false;
                 if (strcasecmp(keylist[i].val, "y") == 0)
                     pConf->param->run_abs_limit = true;
+            } else if (i == 42) {
+                if (keylist[i].val)
+                    pConf->param->preemptableResources = strdup(keylist[i].val);
             } else if (i > 5) {
                 if (i < 23)
                     value = my_atoi(keylist[i].val, INFINIT_INT, 0);
@@ -766,7 +772,7 @@ isn't a positive  integer between 1 and %d; ignored", __func__, fname, *lineNum,
                             break;
                         default:
                             ls_syslog(LOG_ERR, "\
-%s: File%s in section Parameters ending at line %d: Impossible cases <%d>.",
+%s: File %s section Parameters ending at line %d: Wrong number %d in switch statement.",
                                       __func__, fname, *lineNum, i);
                             lsberrno = LSBE_CONF_WARNING;
                             break;
@@ -778,19 +784,20 @@ isn't a positive  integer between 1 and %d; ignored", __func__, fname, *lineNum,
     if (pConf->param->maxUserPriority <= 0
         && pConf->param->jobPriorityValue > 0
         && pConf->param->jobPriorityTime > 0) {
-        ls_syslog(LOG_ERR, I18N(5453,
-                                "%s: File%s in section Parameters : MAX_USER_PRIORITY should be defined first so that JOB_PRIORITY_OVER_TIME can be used: job priority control disabled"), /* catgets 5453 */
+
+        ls_syslog(LOG_ERR, "\
+%s: File %s in section Parameters : MAX_USER_PRIORITY should be defined first so that JOB_PRIORITY_OVER_TIME can be used: job priority control disabled",
                   __func__, fname);
         pConf->param->jobPriorityValue = -1;
         pConf->param->jobPriorityTime  = -1;
         lsberrno = LSBE_CONF_WARNING;
     }
-    freekeyval (keylist);
+    freekeyval(keylist);
     return TRUE;
 }
 
 static int
-my_atoi (char *arg, int upBound, int botBound)
+my_atoi(char *arg, int upBound, int botBound)
 {
     int num;
 
@@ -804,7 +811,7 @@ my_atoi (char *arg, int upBound, int botBound)
 }
 
 static float
-my_atof (char *arg, float upBound, float botBound)
+my_atof(char *arg, float upBound, float botBound)
 {
     float num;
 
@@ -2562,8 +2569,9 @@ do_Hosts(struct lsConf *conf, char *fname, int *lineNum, struct lsInfo *info, in
     if (conf == NULL)
         return FALSE;
 
-    FREEUP (keylist);
-    if (!(keylist = (struct keymap *)malloc ((HKEY_DISPATCH_WINDOW+2)*
+    FREEUP(keylist);
+
+    if (!(keylist = malloc((HKEY_DISPATCH_WINDOW + 2)*
                                              sizeof(struct keymap)))) {
         ls_syslog(LOG_ERR, I18N_FUNC_FAIL_M, fname, "malloc");
         return FALSE;
@@ -2577,7 +2585,7 @@ do_Hosts(struct lsConf *conf, char *fname, int *lineNum, struct lsInfo *info, in
     keylist[HKEY_UJOB_LIMIT].key="JL/U";
     keylist[HKEY_DISPATCH_WINDOW].key="DISPATCH_WINDOW";
     keylist[HKEY_AFFINITY].key="AFFINITY";
-    keylist[HKEY_AFFINITY+1].key=NULL;
+    keylist[HKEY_AFFINITY + 1].key=NULL;
 
     initHostInfo ( &host );
 

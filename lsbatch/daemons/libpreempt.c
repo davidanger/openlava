@@ -20,6 +20,10 @@
 
 static struct jData *
 find_first_pend_job(struct qData *);
+static bool_t
+is_pend_for_license(struct jData *);
+static bool_t
+is_preemptable_resource(const char *);
 
 /* prm_init()
  */
@@ -75,18 +79,37 @@ prm_elect_preempt(struct qData *qPtr, link_t *rl, int numjobs)
         assert(jPtr->jStatus & JOB_STAT_PEND
                || jPtr->jStatus & JOB_STAT_PSUSP);
 
-        if (jPtr->jStatus & JOB_STAT_PEND
-            && jPtr->newReason == 0) {
-            ++numPEND;
-            /* Save the candidate in jl
-             */
-            enqueue_link(jl, jPtr);
-            if (logclass & LC_PREEMPT)
-                ls_syslog(LOG_INFO, "\
+        /* mbatchd does preempt for resources different
+         * than slots
+         */
+        if (mbdParams->preemptableResources) {
+
+            if (! is_pend_for_license(jPtr)) {
+                if (logclass & LC_PREEMPT) {
+                    ls_syslog(LOG_INFO, "\
 %s: job %s queue %s can trigger preemption", __func__,
-                          lsb_jobid2str(jPtr->jobId), qPtr->queue);
+                              lsb_jobid2str(jPtr->jobId), qPtr->queue);
+                }
+                goto dalsi;
+            }
+        } else {
+            /* mbatchd preempts for slots
+             */
+            if (! (jPtr->jStatus & JOB_STAT_PEND
+                   && jPtr->newReason == 0)) {
+                goto dalsi;
+            }
         }
 
+        ++numPEND;
+        /* Save the candidate in jl
+         */
+        enqueue_link(jl, jPtr);
+        if (logclass & LC_PREEMPT)
+            ls_syslog(LOG_INFO, "\
+%s: job %s queue %s can trigger preemption", __func__,
+                      lsb_jobid2str(jPtr->jobId), qPtr->queue);
+    dalsi:
         /* Fine della coda
          */
         if (jPtr2 == (void *)jDataList[PJL]
@@ -114,7 +137,7 @@ prm_elect_preempt(struct qData *qPtr, link_t *rl, int numjobs)
 
         /* Initialiaze the iterator on the list
          * of preemptable queue, the list is
-         * traverse in the order in which it
+         * traversed in the order in which it
          * was configured.
          */
         traverse_init(jPtr->qPtr->preemptable, &iter);
@@ -194,4 +217,99 @@ find_first_pend_job(struct qData *qPtr)
     }
 
     return NULL;
+}
+
+/* is_pend_for_license()
+ */
+static bool_t
+is_pend_for_license(struct jData *jPtr)
+{
+    struct resVal *resPtr;
+    int cc;
+    int rusage;
+    int is_set;
+    int reason;
+    linkiter_t iter;
+    struct _rusage_ *r;
+    struct resVal r2;
+
+    /* Try the host and then the queue
+     */
+    resPtr = jPtr->shared->resValPtr;
+    if (resPtr == NULL)
+        resPtr = jPtr->qPtr->resValPtr;
+    if (resPtr == NULL)
+        return false;
+
+    rusage = 0;
+    for (cc = 0; cc < GET_INTNUM(allLsInfo->nRes); cc++)
+        rusage += resPtr->rusage_bit_map[cc];
+
+    if (rusage == 0)
+        return false;
+
+    traverse_init(resPtr->rl, &iter);
+    while ((r = traverse_link(&iter))) {
+
+        r2.rusage_bit_map = r->bitmap;
+        r2.val = r->val;
+
+        for (cc = 0; cc < allLsInfo->nRes; cc++) {
+
+            if (NOT_NUMERIC(allLsInfo->resTable[cc]))
+                continue;
+
+            TEST_BIT(cc, r2.rusage_bit_map, is_set);
+            if (is_set == 0)
+                continue;
+
+            if (r2.val[cc] >= INFINIT_LOAD
+                || r2.val[cc] < 0.01)
+                continue;
+
+            if (cc < allLsInfo->numIndx)
+                continue;
+
+            if (is_preemptable_resource(allLsInfo->resTable[cc].name))
+                goto dal;
+        }
+    }
+
+dal:
+    if (jPtr->numReasons == 0)
+        return false;
+
+    for (cc = 0; cc < jPtr->numReasons; cc++) {
+        GET_LOW(reason, jPtr->reasonTb[cc]);
+        if (reason >= PEND_HOST_JOB_RUSAGE)
+            return true;
+        if (reason >= PEND_HOST_QUE_RUSAGE
+            && reason < PEND_HOST_JOB_RUSAGE)
+            return true;
+    }
+
+    return false;
+}
+
+/* is_preemptable_resource()
+ */
+static bool_t
+is_preemptable_resource(const char *res)
+{
+    static char buf[MAXLSFNAMELEN];
+    char *p;
+    char *str;
+
+    if (mbdParams->preemptableResources == NULL)
+        return false;
+
+    strcpy(buf, mbdParams->preemptableResources);
+
+    str = buf;
+    while ((p = getNextWord_(&str))) {
+        if (strcmp(p, res) == 0)
+            return true;
+    }
+
+    return false;
 }
