@@ -2571,13 +2571,16 @@ do_Hosts(struct lsConf *conf, char *fname, int *lineNum, struct lsInfo *info, in
 
     FREEUP(keylist);
 
-    if (!(keylist = malloc((HKEY_DISPATCH_WINDOW + 2)*
-                                             sizeof(struct keymap)))) {
-        ls_syslog(LOG_ERR, I18N_FUNC_FAIL_M, fname, "malloc");
+    /* The define starts from 0 so + 1 is the last and + 2
+     * holds the terminating NULL.
+     */
+    if (!(keylist = calloc(HKEY_AFFINITY + 2, sizeof(struct keymap)))) {
+        ls_syslog(LOG_ERR, "\
+%s: calloc() %d bytes failed: %m", __func__, HKEY_AFFINITY + 2);
         return FALSE;
     }
 
-    initkeylist(keylist, HKEY_HNAME+1, HKEY_DISPATCH_WINDOW+2, info);
+    initkeylist(keylist, HKEY_HNAME + 1, HKEY_AFFINITY + 1, info);
     keylist[HKEY_HNAME].key="HOST_NAME";
     keylist[HKEY_MXJ].key="MXJ";
     keylist[HKEY_RUN_WINDOW].key="RUN_WINDOW";
@@ -2585,9 +2588,10 @@ do_Hosts(struct lsConf *conf, char *fname, int *lineNum, struct lsInfo *info, in
     keylist[HKEY_UJOB_LIMIT].key="JL/U";
     keylist[HKEY_DISPATCH_WINDOW].key="DISPATCH_WINDOW";
     keylist[HKEY_AFFINITY].key="AFFINITY";
-    keylist[HKEY_AFFINITY + 1].key=NULL;
+    /* the last one is NULL because of calloc()
+     */
 
-    initHostInfo ( &host );
+    initHostInfo(&host);
 
 
     linep = getNextLineC_conf(conf, lineNum, TRUE);
