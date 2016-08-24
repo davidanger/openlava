@@ -4,6 +4,13 @@ Release notes for OpenLava versions
            ^
            |
            |
+-- Added support for binding multiple slots to a core by introducing HOSTS_SHARES
+   parameter in lsb.queues for specifying the number of shares the queue is
+   allocated for particular host/hostgroup. The share represents the proportion of
+   the total number of cores on a host that will be allocated to the queue.
+-- Updated non-numa cpu binding feature to support binding multiple
+   cores to a job.
+-- Added slot limit per host for specific queues in lsb.resources.
 -- Added lsb.params PREEMPTABLE_RESOURCES parameters. This enable resource
    preemption in MBD If this parameter is configured the queue preemption
    is done based on the specified resources and not by the host slots which is
@@ -21,13 +28,6 @@ Release notes for OpenLava versions
 -- In the bootstrap.sh file create the revision number file
    which is going to be installed in the etc directory.
 -- Create lsid 4.0dev4 output.
--- Added support for binding multiple slots to a core by introducing HOSTS_SHARES
-   parameter in lsb.queues for specifying the number of shares the queue is
-   allocated for particular host/hostgroup. The share represents the proportion of
-   the total number of cores on a host that will be allocated to the queue.
--- Updated non-numa cpu binding feature to support binding multiple
-   cores to a job.
--- Added slot limit per host for specific queues in lsb.resources.
 
 4.0pre3
 =======
