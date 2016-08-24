@@ -192,6 +192,7 @@ extern int do_setJobAttr(XDR *, int, struct sockaddr_in *, char *,
                          struct LSFHeader *, struct lsfAuth *);
 static void preempt(void);
 static void decay_run_time(void);
+static int requeue_job(struct jData *);
 
 static struct chanData *chans;
 
@@ -1037,7 +1038,7 @@ periodicCheck(void)
 
     if (now - last_tryControlJobs > sbdSleepTime) {
         last_tryControlJobs = now;
-        TIMEIT(0, tryResume(), "tryResume()");
+        TIMEIT(0, tryResume(NULL), "tryResume()");
     }
 
     if (now - last_checkConf > condCheckTime) {
@@ -1412,43 +1413,97 @@ preempt(void)
         }
 
         while ((jPtr = pop_link(rl))) {
-            struct signalReq s;
-            struct lsfAuth auth;
-            int cc;
-
-            jPtr->shared->jobBill.beginTime = time(NULL) + 120;
-            jPtr->newReason = PEND_JOB_PREEMPTED;
-            jPtr->jFlags |= JFLAG_JOB_PREEMPTED;
-
-            if (logclass & LC_PREEMPT)
-                ls_syslog(LOG_DEBUG, "\
-%s: requeueing job %s will try to restart later", __func__,
-                          lsb_jobid2str(jPtr->jobId),
-                          jPtr->qPtr->queue);
-
-            /* requeue me darling
-             */
-            s.sigValue = SIG_ARRAY_REQUEUE;
-            s.jobId = jPtr->jobId;
-            s.actFlags = REQUEUE_RUN;
-            s.chkPeriod = JOB_STAT_PEND;
-
-            memset(&auth, 0, sizeof(struct lsfAuth));
-            strcpy(auth.lsfUserName, lsbManager);
-            auth.gid = auth.uid = managerId;
-
-            cc = signalJob(&s, &auth);
-            if (cc != LSBE_NO_ERROR) {
-                ls_syslog(LOG_ERR, "\
-%s: error while requeue job %s state %d", __func__,
-                          lsb_jobid2str(jPtr->jobId), jPtr->jStatus);
-            }
+            if (mbdParams->preemptableResources)
+                stop_job(jPtr, JFLAG_JOB_PREEMPTED);
+            else
+                requeue_job(jPtr);
         }
+
         fin_link(rl);
     }
 
     if (logclass & LC_PREEMPT)
         ls_syslog(LOG_INFO, "%s: leaving ...", __func__);
+}
+
+static int
+requeue_job(struct jData *jPtr)
+{
+    struct signalReq s;
+    struct lsfAuth auth;
+    int cc;
+
+    jPtr->shared->jobBill.beginTime = time(NULL) + msleeptime * 2;
+    jPtr->newReason = PEND_JOB_PREEMPTED;
+    jPtr->jFlags |= JFLAG_JOB_PREEMPTED;
+
+    if (logclass & LC_PREEMPT)
+        ls_syslog(LOG_DEBUG, "\
+%s: requeueing job %s will try to restart later", __func__,
+                  lsb_jobid2str(jPtr->jobId),
+                  jPtr->qPtr->queue);
+
+    /* requeue me darling
+     */
+    s.sigValue = SIG_ARRAY_REQUEUE;
+    s.jobId = jPtr->jobId;
+    s.actFlags = REQUEUE_RUN;
+    s.chkPeriod = JOB_STAT_PEND;
+
+    memset(&auth, 0, sizeof(struct lsfAuth));
+    strcpy(auth.lsfUserName, lsbManager);
+    auth.gid = auth.uid = managerId;
+
+    cc = signalJob(&s, &auth);
+    if (cc != LSBE_NO_ERROR) {
+        ls_syslog(LOG_ERR, "\
+%s: error while requeue job %s state %d", __func__,
+                  lsb_jobid2str(jPtr->jobId), jPtr->jStatus);
+        return -1;
+    }
+
+    return 0;
+}
+
+char *
+str_flags(int flag)
+{
+    static char buf[BUFSIZ];
+
+    buf[0] = 0;
+
+    if (flag & JFLAG_READY)
+        sprintf(buf, "JFLAG_READY");
+    if (flag & JFLAG_EXACT)
+        sprintf(buf + strlen(buf), "JFLAG_EXACT ");
+    if (flag & JFLAG_UPTO)
+        sprintf(buf + strlen(buf), "JFLAG_UPTO ");
+    if (flag & JFLAG_DEPCOND_REJECT)
+        sprintf(buf + strlen(buf), "JFLAG_DEPCOND_REJECT ");
+    if (flag & JFLAG_SEND_SIG)
+        sprintf(buf + strlen(buf), "JFLAG_SEND_SIG ");
+    if (flag & JFLAG_BTOP)
+        sprintf(buf + strlen(buf), "JFLAG_BTOP ");
+    if (flag & JFLAG_READY1)
+        sprintf(buf + strlen(buf), "JFLAG_READY1 ");
+    if (flag & JFLAG_READY2)
+        sprintf(buf + strlen(buf), "JFLAG_READY2 ");
+    if (flag & JFLAG_URGENT)
+        sprintf(buf + strlen(buf), "JFLAG_URGENT ");
+    if (flag & JFLAG_URGENT_NOSTOP)
+        sprintf(buf + strlen(buf), "JFLAG_URGENT_NOSTOP ");
+    if (flag & JFLAG_REQUEUE)
+        sprintf(buf + strlen(buf), "JFLAG_REQUEUE ");
+    if (flag & JFLAG_HAS_BEEN_REQUEUED)
+        sprintf(buf + strlen(buf), "JFLAG_HAS_BEEN_REQUEUED ");
+    if (flag & JFLAG_JOB_PREEMPTED)
+        sprintf(buf + strlen(buf), "JFLAG_JOB_PREEMPTED ");
+    if (flag & JFLAG_BORROWED_SLOTS)
+        sprintf(buf + strlen(buf), "JFLAG_BORROWED_SLOTS ");
+    if (flag & JFLAG_WAIT_SWITCH)
+        sprintf(buf + strlen(buf), "JFLAG_BORROWED_SLOTS ");
+
+    return buf;
 }
 
 static void

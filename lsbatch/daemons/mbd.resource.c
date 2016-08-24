@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 David Bigagli
+ * Copyright (C) 2015 - 2016 David Bigagli
  * Copyright (C) 2007 Platform Computing Inc
  *
  * This program is free software; you can redistribute it and/or modify
@@ -740,6 +740,42 @@ pryc:
 
     return slots;
 }
+
+/* stop_job()
+ */
+int
+stop_job(struct jData *jPtr, int flag)
+{
+    struct signalReq s;
+    struct lsfAuth auth;
+    int cc;
+
+    s.sigValue = SIGSTOP;
+    s.jobId = jPtr->jobId;
+    s.chkPeriod = 0;
+    s.actFlags = 0;
+
+    memset(&auth, 0, sizeof(struct lsfAuth));
+    strcpy(auth.lsfUserName, lsbManager);
+    auth.gid = auth.uid = managerId;
+
+    cc = signalJob(&s, &auth);
+    if (cc != LSBE_NO_ERROR) {
+        ls_syslog(LOG_ERR, "\
+%s: error while suspending job %s state 0x%x", __func__,
+                  lsb_jobid2str(jPtr->jobId), jPtr->jStatus);
+        return -1;
+    }
+
+    jPtr->jFlags |= flag;
+
+    ls_syslog(LOG_INFO, "\
+%s: stopping job %s jFlag %s", __func__, lsb_jobid2str(jPtr->jobId),
+              str_flags(jPtr->jFlags));
+
+    return 0;
+}
+
 
 static void
 initQPRValues(struct qPRValues *qPRValuesPtr, struct qData *qPtr)

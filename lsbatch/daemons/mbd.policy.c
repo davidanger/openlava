@@ -338,6 +338,7 @@ static void handle_reserve_memory(struct jData *, int);
 static struct jData *jiter_next_job2(LIST_T *);
 static bool_t run_time_ok(struct jData *);
 static bool_t decrease_mem_by_slots(struct jData *);
+static bool_t higher_queue_has_pend_jobs(struct qData *);
 
 static bool_t lsbPtilePack = FALSE;
 
@@ -4692,6 +4693,9 @@ scheduleAndDispatchJobs(void)
     int count;
     bool_t has_ownership;
     int num_iter;
+    static hTab *susp_jobs;
+    hEnt *ent;
+    sTab stab;
 
     now_disp = time(NULL);
     ZERO_OUT_TIMERS();
@@ -4699,6 +4703,17 @@ scheduleAndDispatchJobs(void)
     if (qsort_jobs) {
         sort_job_list(MJL);
         TIMEIT(0, sort_job_list(PJL), "sort_job_list()");
+    }
+
+    /* suspended jobs table
+     */
+    if (susp_jobs == NULL) {
+        susp_jobs = calloc(1, sizeof(hTab));
+        h_initTab_(susp_jobs, 181);
+    }
+    while ((ent = h_firstEnt_(susp_jobs, &stab))) {
+        h_rmEnt_(susp_jobs, ent);
+        ent = h_nextEnt_(&stab);
     }
 
     if (jRefList == NULL)
@@ -4816,6 +4831,13 @@ scheduleAndDispatchJobs(void)
                 if (jPtr->jStatus & JOB_STAT_RUN) {
                     accumRunTime(jPtr, jPtr->jStatus, now_disp);
                 }
+
+                if (jPtr->jStatus & JOB_STAT_SSUSP) {
+                    h_addEnt_(susp_jobs, jPtr->qPtr->queue, NULL);
+                    ls_syslog(LOG_INFO, "\
+%s: found ssusp job  %s in queue %s", __func__, lsb_jobid2str(jPtr->jobId),
+                              jPtr->qPtr->queue);
+                }
             }
 
             lastUpdTime = now_disp;
@@ -4867,7 +4889,7 @@ scheduleAndDispatchJobs(void)
      */
     if (0) {
         if (!(mSchedStage & M_STAGE_RESUME_SUSP)) {
-            TIMEIT(0, tryResume(), "tryResume()");
+            TIMEIT(0, tryResume(NULL), "tryResume()");
             mSchedStage |= M_STAGE_RESUME_SUSP;
         }
 
@@ -4895,6 +4917,7 @@ scheduleAndDispatchJobs(void)
 
     if (numLsbUsable <= 0) {
         numLsbUsable = numQUsable = 0;
+        TIMEIT(0, tryResume(NULL), "tryResume()");
         resetSchedulerSession();
         return 0;
     }
@@ -4924,6 +4947,14 @@ scheduleAndDispatchJobs(void)
          * number.
          */
         for (qp = qDataList->forw; qp != qDataList; qp = qp->forw) {
+            hEnt *ent2;
+
+            if ((ent2 = h_getEnt_(susp_jobs, qp->queue))
+                && higher_queue_has_pend_jobs(qp) == false) {
+                ls_syslog(LOG_INFO, "\
+%s: check if jobs in queue %s can be resumed", __func__, qp->queue);
+                tryResume(qp);
+            }
 
             if (qp->numPEND == 0 && qp->numRESERVE == 0)
                 continue;
@@ -4949,6 +4980,7 @@ scheduleAndDispatchJobs(void)
 
     if (numQUsable <= 0) {
         numQUsable = 0;
+        TIMEIT(0, tryResume(NULL), "tryResume()");
         resetSchedulerSession();
         return 0;
     }
@@ -4962,6 +4994,7 @@ scheduleAndDispatchJobs(void)
     if (LIST_NUM_ENTRIES(jRefList) == 0) {
         ls_syslog(LOG_INFO, "\
 %s: no pending or migrating to jobs to schedule at the moment.", __func__);
+        TIMEIT(0, tryResume(NULL), "tryResume()");
         resetSchedulerSession();
         return 0;
     }
@@ -5008,6 +5041,11 @@ scheduleAndDispatchJobs(void)
                 dispatchAJob0(jPtr, false);
             }
         }
+    }
+
+    if (!(mSchedStage & M_STAGE_RESUME_SUSP)) {
+        TIMEIT(0, tryResume(NULL), "tryResume()");
+        mSchedStage |= M_STAGE_RESUME_SUSP;
     }
 
     if (logclass & LC_SCHED) {
@@ -5246,6 +5284,40 @@ jiter_next_job2(LIST_T *jRefList)
     }
 
     return NULL;
+}
+
+/* higher_queue_has_pend_jobs()
+ */
+static bool_t
+higher_queue_has_pend_jobs(struct qData *qPtr)
+{
+    struct qData *qp;
+
+    /* From the queue where the ssusp job is
+     * walk higher priority jobs and check
+     * if they have pending jobs
+     */
+    for (qp = qPtr->back;  qp != qDataList; qp = qp->back) {
+
+        /* Here we assume that at least one of the pending jobs
+         * in the higher priority queue is pending for the license,
+         * this because the job that trigger this function has
+         * been preempted for a license.
+         */
+        if (qp->numPEND > 0) {
+            ls_syslog(LOG_INFO, "\
+%s: found queue %s priority %d higher than mine %s %d with %d pendjobs", __func__,
+                      qp->queue, qp->priority, qPtr->queue, qPtr->priority,
+                      qp->numPEND);
+            return true;
+        }
+    }
+
+    ls_syslog(LOG_INFO, "\
+%s: no queues higher than mine %s %d with pendjobs", __func__,
+              qPtr->queue, qPtr->priority);
+
+    return false;
 }
 
 static int

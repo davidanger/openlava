@@ -105,6 +105,8 @@ static int    mbdRcvJobFile(int, struct lenData *);
 static void closeSbdConnect4ZombieJob(struct jData *);
 static int set_queue_last_job(LIST_T *, struct jData *);
 static void rmMessageFile(struct jData *);
+static void ssusp_job(struct jData *);
+static int resume_job(struct jData *);
 
 extern int glMigToPendFlag;
 extern int requeueToBottom;
@@ -1884,6 +1886,10 @@ jobStatusSignal(sbdReplyType reply, struct jData *jData, int sigValue,
             }
             jData->jStatus &= ~JOB_STAT_SIGNAL;
             jData->pendEvent.sig = SIG_NULL;
+            /* try to resume a job that has been preempted
+             * either by glb or by queue preemption.
+             */
+            ssusp_job(jData);
             break;
 
         case SIG_RESUME_USER:
@@ -7300,7 +7306,7 @@ getReserveParams (struct resVal *resValPtr, int *duration, int *rusage_bit_map)
 }
 
 void
-tryResume(void)
+tryResume(struct qData *qPtr)
 {
     char fname[] = "tryResume";
     struct jData *jp;
@@ -7314,11 +7320,13 @@ tryResume(void)
     if (logclass & (LC_SCHED | LC_EXEC))
         ls_syslog (LOG_DEBUG1, "%s: Enter this routinue....", fname);
 
-    for (hPtr = (struct hData *)hostList->back;
-         hPtr != (void *)hostList;
-         hPtr = hPtr->back) {
+    if (0) {
+        for (hPtr = (struct hData *)hostList->back;
+             hPtr != (void *)hostList;
+             hPtr = hPtr->back) {
 
-        hPtr->flags &= ~HOST_JOB_RESUME;
+            hPtr->flags &= ~HOST_JOB_RESUME;
+        }
     }
 
     for (jp = jDataList[SJL]->back; jp != jDataList[SJL]; jp = next) {
@@ -7329,18 +7337,25 @@ tryResume(void)
         if (!IS_SUSP(jp->jStatus))
             continue;
 
-        if (jp->hPtr[0]->flags & HOST_JOB_RESUME)
+        if (0 && jp->hPtr[0]->flags & HOST_JOB_RESUME)
             continue;
 
-        if (logclass & (LC_EXEC))
-            ls_syslog(LOG_DEBUG3, "%s: job=%s jStatus=%x reason=%x subreason=%d actPid=%d>", fname, lsb_jobid2str(jp->jobId), jp->jStatus, jp->newReason, jp->subreasons, jp->actPid);
+        if (logclass & LC_SCHED) {
+            ls_syslog(LOG_INFO, "\
+%s: job %s jStatus %x reason %x subreason %d actPid %d>",
+                      fname, lsb_jobid2str(jp->jobId),
+                      jp->jStatus, jp->newReason,
+                      jp->subreasons, jp->actPid);
+        }
 
         if (!(jp->jStatus & JOB_STAT_SSUSP)
             || !(jp->newReason & SUSP_MBD_LOCK)
             || (jp->actPid != 0))
             continue;
 
-        if ((jp->jFlags & JFLAG_SEND_SIG) && nSbdConnections > 0) {
+        /* HOST_JOB_RESUME
+         */
+        if (0 && (jp->jFlags & JFLAG_SEND_SIG) && nSbdConnections > 0) {
 
             for (sbdPtr = sbdNodeList.forw; sbdPtr != &sbdNodeList;
                  sbdPtr = sbdPtr->forw) {
@@ -7354,12 +7369,19 @@ tryResume(void)
                 continue;
             }
         }
+
+        /* There is a queue in which we try to resume
+         */
+        if (qPtr != NULL
+            && jp->qPtr != qPtr)
+            continue;
+
         if (jp->jStatus & JOB_STAT_RESERVE) {
             updResCounters (jp, jp->jStatus & ~JOB_STAT_RESERVE);
             jp->jStatus &= ~JOB_STAT_RESERVE;
         }
         resumeSig = 0;
-        if ((returnCode = shouldResume (jp, &resumeSig)) != CANNOT_RESUME) {
+        if ((returnCode = shouldResume(jp, &resumeSig)) != CANNOT_RESUME) {
 
             if (!(jp->jStatus & JOB_STAT_RESERVE)) {
                 if (logclass & (LC_EXEC))
@@ -7370,9 +7392,22 @@ tryResume(void)
             }
 
             if (returnCode == RESUME_JOB) {
-                sigStartedJob (jp, resumeSig, 0, 0);
+                sigStartedJob(jp, resumeSig, 0, 0);
                 jp->jFlags |= JFLAG_SEND_SIG;
-                jp->hPtr[0]->flags |= HOST_JOB_RESUME;
+                if (0)
+                    jp->hPtr[0]->flags |= HOST_JOB_RESUME;
+
+                /* Clean the flag so that check_token_status()
+                 * will count this job and possibly not return
+                 * this token to glb. Here we are racing with
+                 * sbd that is resuming the job in async way.
+                 */
+                ls_syslog(LOG_INFO, "\
+%s: job %s is being resumed flags %s", __func__, lsb_jobid2str(jp->jobId),
+                          str_flags(jp->jFlags));
+
+                if (jp->jFlags & JFLAG_JOB_PREEMPTED)
+                    jp->jFlags &= ~JFLAG_JOB_PREEMPTED;
 
                 adjLsbLoad (jp, true, true);
                 if (logclass & (LC_EXEC))
@@ -8913,4 +8948,71 @@ set_job_last_bbot_priority(struct jData *jPtr)
         lqueue->last_bbot = lqueue->last_bbot - 1;
         jPtr->priority = lqueue->last_bbot;
     }
+}
+/* ssusp_job()
+ * try to resume a job that has been preempted
+ * either by glb or by queue preemption.
+ */
+static void
+ssusp_job(struct jData *jPtr)
+{
+    ls_syslog(LOG_INFO, "\
+%s: jobID %s state 0x%x flags %s", __func__, lsb_jobid2str(jPtr->jobId),
+              jPtr->jStatus, str_flags(jPtr->jFlags));
+
+    if ((jPtr->jStatus & JOB_STAT_USUSP)
+        || (jPtr->jFlags & JFLAG_JOB_PREEMPTED)) {
+
+        if (resume_job(jPtr) < 0) {
+            ls_syslog(LOG_INFO, "\
+%s: failed in resuming job %s jflags %s", __func__,
+                      lsb_jobid2str(jPtr->jobId),
+                      str_flags(jPtr->jFlags));
+        }
+    }
+}
+
+/* resume_job()
+ *
+ * The job will only be resumed in tryResume() here
+ * we just transition the state from USUSP to SSUSP
+ */
+static int
+resume_job(struct jData *jPtr)
+{
+    struct signalReq s;
+    struct lsfAuth auth;
+    int cc;
+
+    s.sigValue = SIGCONT;
+    s.jobId = jPtr->jobId;
+    s.chkPeriod = 0;
+    s.actFlags = 0;
+
+    memset(&auth, 0, sizeof(struct lsfAuth));
+    strcpy(auth.lsfUserName, lsbManager);
+    auth.gid = auth.uid = managerId;
+
+    /* The job will only be resumed if there
+     * are free tokens in shouldResume() function.
+     */
+    cc = signalJob(&s, &auth);
+    if (cc != LSBE_NO_ERROR) {
+        ls_syslog(LOG_ERR, "\
+%s: error while resuming job %s state %d", __func__,
+                  lsb_jobid2str(jPtr->jobId), jPtr->jStatus);
+        return -1;
+    }
+
+    ls_syslog(LOG_INFO, "\
+%s: jobid %s bresumed after being stopped jFlags %s",
+              __func__, lsb_jobid2str(jPtr->jobId), str_flags(jPtr->jFlags));
+
+    /* Do not clean the  JFLAG_PREEMPT_GLB or JFLAG_JOB_PREEMPTED
+     * as get_job_tokens() will use them to ask for more tokens
+     * to glb should it be enabled. The flags will be cleaned
+     * in tryResume() if the job really resumes to JOB_STAT_RUN.
+     */
+
+    return 0;
 }

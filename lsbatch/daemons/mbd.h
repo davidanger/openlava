@@ -101,6 +101,13 @@ typedef enum {
 #define JFLAG_HAS_BEEN_REQUEUED 0x2000000
 #define JFLAG_JOB_PREEMPTED     0x20000000
 #define JFLAG_BORROWED_SLOTS    0x40000000
+#define JFLAG_JOB_PREEMPTED     0x20000000
+
+/* this does not fit an int
+ * 0x80000000 = 2147483648
+ * INT32_MAX = 2147483647
+ * 2147483647-2147483648 = -1
+ */
 #define JFLAG_WAIT_SWITCH       0x80000000
 
 
@@ -1108,7 +1115,6 @@ extern void                 jobStatusSignal(sbdReplyType reply,
                                             struct jData *jData,
                                             int sigValue, int chkFlags,
                                             struct jobReply *jobReply);
-extern void                 tryResume (void);
 extern void                 freeSubmitReq (struct submitReq *);
 extern int                  shouldLockJob (struct jData *, int);
 extern int                  sigPFjob (struct jData *, int, time_t, int);
@@ -1551,7 +1557,9 @@ extern int encode_nodes(XDR *, int *, int, struct LSFHeader *);
 extern int can_switch_jgrp(struct jgrpLog *);
 extern int check_job_group(struct jData *, struct lsfAuth *);
 extern bool_t jobgroup_limit_ok(struct jData *);
-
 extern int do_resLimitInfo(XDR *, int, struct sockaddr_in *, struct LSFHeader *);
+extern int stop_job(struct jData *, int);
+extern char *str_flags(int);
+extern void tryResume(struct qData *);
 
 #endif /* _MBD_HEADER_ */
