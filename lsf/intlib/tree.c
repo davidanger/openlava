@@ -159,7 +159,7 @@ tree_walk(struct tree_ *r,
      */
     link = make_link();
 
-  Loop:
+Loop:
     while (n) {
 
         /* traverse all siblings and enqueue (not push)
@@ -169,14 +169,14 @@ tree_walk(struct tree_ *r,
             enqueue_link(link, n);
 
         cc = (*f)(n, r);
-            /* protocol, the caller is asking
-             * me to stop the traversal, sure...
-             */
-            if (cc < 0) {
-                fin_link(link);
-                return cc;
-            }
-            n = n->right;
+        /* protocol, the caller is asking
+         * me to stop the traversal, sure...
+         */
+        if (cc < 0) {
+            fin_link(link);
+            return cc;
+        }
+        n = n->right;
     }
 
     /* pop each subroot and traverse

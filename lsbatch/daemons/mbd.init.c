@@ -1533,9 +1533,9 @@ initQData (void)
     qPtr->acceptIntvl        = INFINIT_INT;
 
     qPtr->loadSched = my_calloc(allLsInfo->numIndx,
-                              sizeof(float), __func__);
+                                sizeof(float), __func__);
     qPtr->loadStop = my_calloc(allLsInfo->numIndx,
-                             sizeof(float), __func__);
+                               sizeof(float), __func__);
     initThresholds (qPtr->loadSched, qPtr->loadStop);
     qPtr->procLimit = -1;
     qPtr->minProcLimit = -1;
@@ -1816,7 +1816,7 @@ getClusterData(void)
 
         if (!lsb_CheckMode)
             ls_syslog(LOG_NOTICE, \
-"%s: The LSF administrator is the invoker in debug mode", __func__);
+                      "%s: The LSF administrator is the invoker in debug mode", __func__);
         lsbManager = lsbManagers[0];
         managerId  = managerIds[0];
     }
@@ -1887,7 +1887,7 @@ setManagers(struct clusterInfo clusterInfo)
         if ((pw = getpwnam (sp)) == NULL) {
             ls_syslog(LOG_ERR, "\
 %s: Invalid LSF administrator name <%s> and userId <%d>",
-                          __func__, sp, tempId);
+                      __func__, sp, tempId);
             managerIds[i] = -1;
             continue;
         }
@@ -2348,7 +2348,7 @@ addQData(struct queueConf *queueConf, int mbdInitFlags )
             if (parse_host_shares(queue->hostshare, qPtr) < 0) {
                 ls_syslog(LOG_ERR, "\
 %s: No valid value for key HOSTS_SHARES in the queue <%s>; ignoring the queue",
-                                __func__, qPtr->queue);
+                          __func__, qPtr->queue);
                 lsb_CheckError = WARNING_ERR;
                 badqueue = TRUE;
             }
@@ -2380,11 +2380,11 @@ addQData(struct queueConf *queueConf, int mbdInitFlags )
                 FREEUP(oldQPtr->reasonTb[0]);
                 FREEUP(oldQPtr->reasonTb[1]);
                 oldQPtr->reasonTb[0] = my_calloc(numLIMhosts + 2,
-                                               sizeof(int),
-                                               __func__);
+                                                 sizeof(int),
+                                                 __func__);
                 oldQPtr->reasonTb[1] = my_calloc(numLIMhosts + 2,
-                                               sizeof(int),
-                                               __func__);
+                                                 sizeof(int),
+                                                 __func__);
 
                 for(j = 0; j < numLIMhosts+2; j++) {
                     oldQPtr->reasonTb[0][j] = 0;
@@ -2442,10 +2442,10 @@ addQData(struct queueConf *queueConf, int mbdInitFlags )
                     ls_syslog(LOG_ERR, "\
 %s: Bad time expression %s/%s in queue window %s; ignored",
                               __func__, queue->windows, save, qPtr->queue);
-                        lsb_CheckError = WARNING_ERR;
-                        freeWeek(qPtr->weekR);
-                        free(save);
-                        continue;
+                    lsb_CheckError = WARNING_ERR;
+                    freeWeek(qPtr->weekR);
+                    free(save);
+                    continue;
                 }
                 qPtr->windEdge = now;
                 if (*(qPtr->windows) != '\0')
@@ -2501,10 +2501,10 @@ addQData(struct queueConf *queueConf, int mbdInitFlags )
             if (cpuFactor == NULL) {
                 ls_syslog(LOG_ERR, "\
 %s: Invalid hostspec %s for %s in queue <%s>; ignored",
-                    __func__,
-                    queue->defaultHostSpec,
-                    "DEFAULT_HOST_SPEC",
-                    qPtr->queue);
+                          __func__,
+                          queue->defaultHostSpec,
+                          "DEFAULT_HOST_SPEC",
+                          qPtr->queue);
                 lsb_CheckError = WARNING_ERR;
             }
             if (cpuFactor != NULL)
@@ -2565,9 +2565,9 @@ addQData(struct queueConf *queueConf, int mbdInitFlags )
 
         if (queue->resReq) {
             qPtr->resValPtr = checkResReq(queue->resReq,
-                                        USE_LOCAL
-                                        | PARSE_XOR
-                                        | CHK_TCL_SYNTAX);
+                                          USE_LOCAL
+                                          | PARSE_XOR
+                                          | CHK_TCL_SYNTAX);
             if (qPtr->resValPtr == NULL) {
                 ls_syslog(LOG_ERR, "\
 %s: invalid RES_REQ %s in queues %s; ignoring",
@@ -2583,7 +2583,7 @@ addQData(struct queueConf *queueConf, int mbdInitFlags )
         if (queue->resumeCond) {
             struct resVal *resValPtr;
             resValPtr = checkResReq(queue->resumeCond,
-                                     USE_LOCAL | CHK_TCL_SYNTAX);
+                                    USE_LOCAL | CHK_TCL_SYNTAX);
             if (resValPtr == NULL) {
                 ls_syslog(LOG_ERR, "\
 %s: invalid RESUME_COND %s in queue %s; ignoring",
@@ -2657,7 +2657,7 @@ addQData(struct queueConf *queueConf, int mbdInitFlags )
  */
 static int
 parse_host_shares(const char *host_shares,
-                         struct qData *qp)
+                  struct qData *qp)
 {
     char *p;
     char *u;
@@ -2698,7 +2698,7 @@ parse_host_shares(const char *host_shares,
                     make_hsacct(hPtr, qp->queue, shares);
                 }
             }
-        /* configure shares for a specific host */
+            /* configure shares for a specific host */
         } else if (hostQMember(name, qp)
                    && (hPtr = getHostData(name)) != NULL) {
             make_hsacct(hPtr, qp->queue, shares);
@@ -3704,7 +3704,8 @@ init_fairshare_scheduler(void)
         if (cc < 0) {
             ls_syslog(LOG_ERR, "\
 %s: failed initializing fairshare plugin, fall back to fcfs", __func__);
-             dlclose(qPtr->fsSched->handle);
+            tree_free(qPtr->fsSched->tree, free_sacct);
+            dlclose(qPtr->fsSched->handle);
             _free_(qPtr->fsSched->name);
             _free_(qPtr->fsSched);
             _free_(qPtr->fairshare);
@@ -4135,6 +4136,7 @@ init_ownership_scheduler(void)
         if (cc < 0) {
             ls_syslog(LOG_ERR, "\
 %s: failed initializing fairshare plugin, fall back to fcfs", __func__);
+            tree_free(qPtr->own_sched->tree, free_sacct);
             dlclose(qPtr->own_sched->handle);
             _free_(qPtr->own_sched->name);
             _free_(qPtr->own_sched);
@@ -4154,6 +4156,7 @@ init_ownership_scheduler(void)
             /* dlclose(qPtr->own_sched->handle);
              */
             tree_free(qPtr->own_sched->tree, free_sacct);
+            dlclose(qPtr->own_sched->handle);
             _free_(qPtr->own_sched->name);
             _free_(qPtr->own_sched);
             _free_(qPtr->ownership);

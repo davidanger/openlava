@@ -171,7 +171,7 @@ z:
 void
 sshare_sort_tree_by_ran_job(struct tree_ *t)
 {
-   /* This must be emptied after every scheduling
+    /* This must be emptied after every scheduling
      * cycle. There could be still some leafs
      * if not all jobs got dispatched.
      */
