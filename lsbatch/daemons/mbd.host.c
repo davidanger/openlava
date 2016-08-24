@@ -1697,6 +1697,7 @@ addMigrantHost(struct hostInfo *info)
     }
 
     addHost(info, &hPtr);
+    _free_(hPtr.host);
 }
 
 /* rmMigrantHost()

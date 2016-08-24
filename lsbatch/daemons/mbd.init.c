@@ -3168,6 +3168,7 @@ updHostList(void)
 %s: Entering this routine...", __func__);
 
     if (hostList) {
+        FREEUP(hostList->name);
         FREEUP(hostList);
     }
 
