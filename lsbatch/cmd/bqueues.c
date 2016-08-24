@@ -582,9 +582,15 @@ print_slot_owned(struct queueInfoEnt *qp)
             numRUN = numRUN + qp->saccts[i]->numRUN;
     }
 
-    printf("\
+    if (qp->loan_duration > 0) {
+        printf("\
+\nTOTAL_SLOTS: %u FREE_SLOTS: %u LOAN_DURATION %d\n", qp->num_owned_slots,
+               qp->num_owned_slots - numRUN, qp->loan_duration);
+    } else {
+        printf("\
 \nTOTAL_SLOTS: %u FREE_SLOTS: %u\n", qp->num_owned_slots,
-           qp->num_owned_slots - numRUN);
+               qp->num_owned_slots - numRUN);
+    }
 
     printf("\
 %9s   %6s   %6s   %6s   %8s\n",

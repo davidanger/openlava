@@ -812,8 +812,8 @@ struct queueInfoEnt {
     struct share_acct **saccts; /* array of share accts */
     char *preemption;
     char *ownership;          /* queue slots ownership */
-    uint32_t loan_duration;   /* loan resources duration */
-    uint32_t num_owned_slots; /* number of owned slots */
+    int  loan_duration;   /* loan resources duration */
+    int  num_owned_slots; /* number of owned slots */
     char   *hostshare;
 };
 

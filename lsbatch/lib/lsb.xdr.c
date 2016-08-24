@@ -1049,10 +1049,13 @@ xdr_queueInfoEnt(XDR *xdrs,
     if (! xdr_var_string(xdrs, &qInfo->preemption))
         return false;
 
-    if (! xdr_uint32_t(xdrs, &qInfo->num_owned_slots))
+    if (! xdr_int(xdrs, &qInfo->num_owned_slots))
         return false;
 
     if (! xdr_shareAcctOwn(xdrs, &qInfo->numAccts, &qInfo->saccts, hdr))
+        return false;
+
+    if (! xdr_int(xdrs, &qInfo->loan_duration))
         return false;
 
     return true;

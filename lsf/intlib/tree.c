@@ -20,6 +20,9 @@
 #include "tree.h"
 #include "link.h"
 
+static void
+tree_free_node(struct tree_node_ *, void (*f)(void *));
+
 /* tree_init()
  */
 struct tree_ *
@@ -266,46 +269,54 @@ znovu:
     return (*f)(NULL, NULL);
 }
 
-/* tree_rm_leaf()
- *
- * Walk down till you find a child and remove it
- */
-struct tree_node_ *
-tree_rm_leaf(struct tree_node_ *n)
-{
-    if (n == NULL)
-        return NULL;
-
-    while (n) {
-        if (n->child)
-            n = n->child;
-        else
-            break;
-    }
-
-    tree_rm_node(n);
-
-    return n;
-}
-
 /* tree_free()
  */
 void
-tree_free(struct tree_ *t)
+tree_free(struct tree_ *t, void (*f)(void *))
 {
+    link_t  *Q;
     struct tree_node_ *n;
+    struct tree_node_ *n2;
 
-    while ((n = tree_rm_leaf(t->root))) {
-        if (n == t->root)
-            break;
-        _free_(n->name);
-        _free_(n);
+    if (t->root == NULL)
+        return;
+
+    Q = make_link();
+    n = t->root->child;
+
+znovu:
+    while (n) {
+
+        n2 = n->right;
+        if (n->child)
+            push_link(Q, n->child);
+
+        tree_free_node(n, f);
+        n = n2;
     }
 
+    n = dequeue_link(Q);
+    if (n)
+        goto znovu;
+
+    fin_link(Q);
     fin_link(t->leafs);
+    if (f)
+        (*f)(t->root->data);
     _free_(t->root->name);
     _free_(t->root);
     _free_(t->name);
     hash_free(t->node_tab, NULL);
     _free_(t);
+}
+
+/* tree_free_node()
+ */
+static void
+tree_free_node(struct tree_node_ *n, void (*f)(void *))
+{
+    _free_(n->name);
+    if (f)
+        (*f)(n->data);
+    _free_(n);
 }

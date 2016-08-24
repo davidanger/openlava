@@ -441,6 +441,7 @@ checkQueues(struct infoReq *queueInfoReqPtr,
 		(*qp->own_sched->fs_get_saccts)(qp,
 						&qRep->numAccts,
 						&qRep->saccts);
+                qRep->loan_duration = qp->loan_duration;
 	    }
 	    qRep->num_owned_slots = qp->num_owned_slots;
 

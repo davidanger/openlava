@@ -74,7 +74,7 @@ extern struct tree_ *sshare_make_tree(const char *,
                                       uint32_t,
                                       struct group_acct *);
 extern struct share_acct *make_sacct(const char *, uint32_t);
-extern void free_sacct(struct share_acct *);
+extern void free_sacct(void *);
 extern int sshare_distribute_slots(struct tree_ *,
                                    uint32_t);
 extern int sshare_distribute_own_slots(struct tree_ *,

@@ -155,6 +155,7 @@ static bool_t is_preemptplugin_ok(void);
 static bool_t is_ownplugin_ok(void);
 static int parse_host_shares(const char *, struct qData *qp);
 static void make_hsacct(struct hData *, char *, int);
+static bool_t check_ownership(struct qData *);
 
 int
 minit(int mbdInitFlags)
@@ -4134,7 +4135,8 @@ init_ownership_scheduler(void)
         if (cc < 0) {
             ls_syslog(LOG_ERR, "\
 %s: failed initializing fairshare plugin, fall back to fcfs", __func__);
-            dlclose(qPtr->fsSched->handle);
+            dlclose(qPtr->own_sched->handle);
+            _free_(qPtr->own_sched->name);
             _free_(qPtr->own_sched);
             _free_(qPtr->ownership);
             qPtr->qAttrib &= ~Q_ATTRIB_OWNERSHIP;
@@ -4146,6 +4148,18 @@ init_ownership_scheduler(void)
          * in the queue.
          */
         qPtr->numFairSlots = qPtr->num_owned_slots = getQueueSlots(qPtr);
+        if (! check_ownership(qPtr)) {
+            ls_syslog(LOG_ERR, "\
+%s: check_ownership() failed, fall back to fcfs", __func__);
+            /* dlclose(qPtr->own_sched->handle);
+             */
+            tree_free(qPtr->own_sched->tree, free_sacct);
+            _free_(qPtr->own_sched->name);
+            _free_(qPtr->own_sched);
+            _free_(qPtr->ownership);
+            qPtr->qAttrib &= ~Q_ATTRIB_OWNERSHIP;
+            return -1;
+        }
         (*qPtr->own_sched->fs_init_own_sched_session)(qPtr);
     }
 
@@ -4232,4 +4246,41 @@ is_ownplugin_ok(void)
     }
 
     return false;
+}
+
+/* check_ownership()
+ *
+ * Sum up all the slots in the root
+ * group and make sure they do not exceed
+ * the total number of configured ownership.
+ */
+
+static bool_t
+check_ownership(struct qData *qPtr)
+{
+    struct tree_node_ *n;
+    struct share_acct *sacct;
+    int sum;
+
+    sum = 0;
+    n = qPtr->own_sched->tree->root->child;
+    while (n) {
+        sacct = n->data;
+        if (logclass & LC_TRACE) {
+            ls_syslog(LOG_INFO, "\
+%s: group %s num owned slots %d sum %d", __func__, n->name,
+                      sacct->shares, sum);
+        }
+        sum = sum + sacct->shares;
+        n = n->right;
+    }
+
+    if (sum > qPtr->num_owned_slots) {
+        ls_syslog(LOG_ERR, "\
+%s: the sum of owned slots by root groups %d > total slots %d, not allowed",
+                  __func__, sum, qPtr->num_owned_slots);
+        return false;
+    }
+
+    return true;
 }

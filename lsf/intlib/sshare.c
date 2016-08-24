@@ -92,7 +92,7 @@ z:
     if (l == NULL) {
         free_sacct(t->root->data);
         fin_link(stack);
-        tree_free(t);
+        tree_free(t, free_sacct);
         return NULL;
     }
 
@@ -100,7 +100,10 @@ z:
     while ((sacct = traverse_link(&iter))) {
 
         n = calloc(1, sizeof(struct tree_node_));
-        n->name = sacct->name;
+        /* dup() the name as later we free both
+         * the tree node and the share account
+         */
+        n->name = strdup(sacct->name);
 
         n = tree_insert_node(root, n);
         enqueue_link(stack, n);
@@ -445,8 +448,12 @@ make_sacct(const char *name, uint32_t shares)
 /* free_sacct()
  */
 void
-free_sacct(struct share_acct *sacct)
+free_sacct(void *s)
 {
+    struct share_acct *sacct;
+
+    sacct = s;
+
     _free_(sacct->name);
     _free_(sacct);
 }

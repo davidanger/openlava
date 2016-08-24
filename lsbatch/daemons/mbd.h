@@ -564,7 +564,7 @@ struct qData {
     char *ownership;              /* ownership description */
     uint32_t num_owned_slots;     /* number of owned slots */
     struct fair_sched *own_sched; /* ownership scheduler interface */
-    uint32_t loan_duration;       /* resource loan max duration */
+    int loan_duration;            /* resource loan max duration */
 };
 
 #define HOST_STAT_REMOTE       0x80000000
