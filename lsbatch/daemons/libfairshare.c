@@ -224,10 +224,13 @@ dalsi:
 
     if (logclass & LC_FAIR) {
         ls_syslog(LOG_INFO, "\
-%s: account %s num slots %d queue %s", __func__, s->name,
-                  s->sent, qPtr->queue);
+%s: account %s num slots %d options 0x%x queue %s", __func__, s->name,
+                  s->sent, s->options, qPtr->queue);
     }
 
+    /* Get the uData that is going to dispatch the
+     * job
+     */
     ent = h_getEnt_(&uDataList, s->name);
     if (ent == NULL) {
         ls_syslog(LOG_ERR, "\
@@ -249,7 +252,26 @@ dalsi:
         jPtr = jref->job;
 
         assert(jPtr->userId == s->uid);
+        /* The uData can have jobs in multiple
+         * queues so pick the one we are scheduling in
+         */
         if (jPtr->qPtr == qPtr) {
+
+            if (s->options & SACCT_WANTS_GROUP) {
+                /* The group wants a specific parent group
+                 * so make sure this job is under it.
+                 */
+                if (strcmp(jPtr->shared->jobBill.userGroup,
+                           n->parent->name) != 0)
+                    continue;
+
+                if (logclass & LC_FAIR) {
+                    ls_syslog(LOG_INFO, "\
+%s: found job %s which wants group %s", __func__, lsb_jobid2str(jPtr->jobId),
+                              n->parent->name);
+                }
+            }
+
             dlink_rm_ent(uPtr->jobs, dl);
             found = true;
             break;
@@ -400,10 +422,16 @@ get_user_node(struct hash_tab *node_tab,
     struct share_acct *sacct2;
     uint32_t sum;
     char key[MAXLSFNAMELEN];;
+    char wants_group;
 
+    wants_group = 0;
     if (jPtr->shared->jobBill.userGroup[0] != 0) {
         sprintf(key, "\
 %s/%s", jPtr->shared->jobBill.userGroup, jPtr->userName);
+        wants_group = 1;
+        /* when picking up the job remember this
+         * share accounts wants a specific group.
+         */
     } else {
         sprintf(key, "%s", jPtr->userName);
     }
@@ -412,8 +440,13 @@ get_user_node(struct hash_tab *node_tab,
      * of nodes.
      */
     n = hash_lookup(node_tab, key);
-    if (n)
+    if (n) {
+        if (wants_group) {
+            sacct = n->data;
+            sacct->options |= SACCT_WANTS_GROUP;
+        }
         return n;
+    }
 
     /* If job specifies parent group lookup
      * all in parent group
@@ -446,6 +479,9 @@ get_user_node(struct hash_tab *node_tab,
 
     tree_insert_node(n->parent, n2);
     sacct2->options |= SACCT_USER;
+    if (wants_group)
+        sacct2->options |= SACCT_WANTS_GROUP;
+
     sprintf(key, "%s/%s", n2->parent->name, n2->name);
     hash_install(node_tab, key, n2, NULL);
     sprintf(key, "%s", n2->name);
