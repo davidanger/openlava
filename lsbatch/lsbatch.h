@@ -814,6 +814,7 @@ struct queueInfoEnt {
     char *ownership;          /* queue slots ownership */
     uint32_t loan_duration;   /* loan resources duration */
     uint32_t num_owned_slots; /* number of owned slots */
+    char   *hostshare;
 };
 
 #define ACT_NO              0

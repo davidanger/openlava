@@ -86,3 +86,11 @@
 #QUEUES = regression low
 #PER_USER = G1
 #End Limit
+
+# Example 8: slot limit per host from specific queue
+#Begin Limit
+#NAME = PerHostLimit
+#PER_HOST = hostGrp1
+#QUEUES = low
+#SLOTS = 12
+#End Limit

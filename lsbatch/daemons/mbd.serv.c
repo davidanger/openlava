@@ -3409,6 +3409,22 @@ addResUsage(struct resLimitReply *limits)
         ent = h_nextEnt_(&sTab);
     }
 
+    ent = h_firstEnt_(&hDataTab, &sTab);
+    while (ent) {
+        pData = ent->hData;
+        ent2 = h_firstEnt_(pData->rAcct, &sTab2);
+        while (ent2) {
+            pqData = ent2->hData;
+            for (i = 0; i < limits->numLimits; i++) {
+                usage = getLimitUsage(&limits->limits[i], pqData);
+                if (usage) {
+                    allLimitUsage[n++] = usage;
+                }
+            }
+            ent2 = h_nextEnt_(&sTab2);
+        }
+        ent = h_nextEnt_(&sTab);
+    }
 
     limits->numUsage = n;
     limits->usage = my_calloc(limits->numUsage, sizeof(struct resLimitUsage), __func__);
@@ -3445,7 +3461,6 @@ getLimitUsage(struct resLimit *limit, struct resData *pAcct)
     int    hasMe = FALSE;
     int    hasAll = FALSE;
     int    neg = FALSE;
-    int    match = FALSE;
     struct resLimitUsage *usage = NULL;
     static struct limitRes *lr;
 
@@ -3569,7 +3584,6 @@ getLimitUsage(struct resLimit *limit, struct resData *pAcct)
                || (hasAll && hasMe && neg))
                 goto clean;
         }
-        match = TRUE;
     }
 
     if (project && pAcct->project) {
@@ -3594,11 +3608,7 @@ getLimitUsage(struct resLimit *limit, struct resData *pAcct)
         if((!hasAll && !hasMe)
            || (hasAll && hasMe && neg))
             goto clean;
-        match = TRUE;
     }
-
-    if (!match)
-        goto clean;
 
     if ((lr = getActiveLimit(limit->res, limit->nRes)) == NULL)
         goto clean;

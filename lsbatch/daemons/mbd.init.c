@@ -153,6 +153,8 @@ static int init_ownership_scheduler(void);
 static bool_t is_fairplugin_ok(void);
 static bool_t is_preemptplugin_ok(void);
 static bool_t is_ownplugin_ok(void);
+static int parse_host_shares(const char *, struct qData *qp);
+static void make_hsacct(struct hData *, char *, int);
 
 int
 minit(int mbdInitFlags)
@@ -2333,6 +2335,16 @@ addQData(struct queueConf *queueConf, int mbdInitFlags )
             badqueue = TRUE;
         }
 
+        if (queue->hostshare) {
+            if (parse_host_shares(queue->hostshare, qPtr) < 0) {
+                ls_syslog(LOG_ERR, "\
+%s: No valid value for key HOSTS_SHARES in the queue <%s>; ignoring the queue",
+                                __func__, qPtr->queue);
+                lsb_CheckError = WARNING_ERR;
+                badqueue = TRUE;
+            }
+        }
+
         if (badqueue) {
             freeQData(qPtr, FALSE);
             continue;
@@ -2627,6 +2639,148 @@ addQData(struct queueConf *queueConf, int mbdInitFlags )
 
         if (qPtr->qAttrib & Q_ATTRIB_BACKFILL)
             qAttributes |= Q_ATTRIB_BACKFILL;
+    }
+}
+
+/* parse_host_shares()
+ *
+ * [[host1, 1] [grp2,5]] or [all, 10]
+ */
+static int
+parse_host_shares(const char *host_shares,
+                         struct qData *qp)
+{
+    char *p;
+    char *u;
+    int cc;
+    int n;
+
+    u = strdup(host_shares);
+    assert(u);
+
+    p = strchr(u, '[');
+    *p++ = 0;
+
+    tokenize(p);
+
+    while (1) {
+        char name[128];
+        int shares;
+        int i;
+        struct hData *hPtr = NULL;
+
+        cc = sscanf(p, "%s%u%n", name, &shares, &n);
+        if (cc == EOF)
+            break;
+        if (cc != 2)
+            goto error;
+        p = p + n;
+
+        /* configure shares for all hosts in the queue */
+        if (searchAll(name)) {
+            if (qp->hostList && qp->numAskedPtr > 0) {
+                for (i = 0; i < qp->numAskedPtr; i++)
+                    make_hsacct(qp->askedPtr[i].hData, qp->queue, shares);
+            } else {
+                struct hData *hPtr;
+                for (hPtr = (struct hData *)hostList->back;
+                     hPtr != (void *)hostList;
+                     hPtr = hPtr->back) {
+                    make_hsacct(hPtr, qp->queue, shares);
+                }
+            }
+        /* configure shares for a specific host */
+        } else if (hostQMember(name, qp)
+                   && (hPtr = getHostData(name)) != NULL) {
+            make_hsacct(hPtr, qp->queue, shares);
+        } else {
+            struct gData *gp = NULL;
+            int num = 0;
+            char** grpMembers = NULL;
+
+            /* invalid shares */
+            if ((gp = getHGrpData(name)) == NULL)
+                goto error;
+
+            /* configure shares for a host group */
+            grpMembers = expandGrp(gp, name, &num);
+            for (i = 0; i < num; i++) {
+                if (hostQMember(grpMembers[i], qp)
+                    && (hPtr = getHostData(grpMembers[i])) != NULL)
+                    make_hsacct(hPtr, qp->queue, shares);
+            }
+            FREEUP(grpMembers);
+        }
+    }
+
+    FREEUP(u);
+    return true;
+
+error:
+
+    FREEUP(u);
+    return false;
+}
+
+/*
+ * Make host share account of queues.
+ */
+static void
+make_hsacct(struct hData *hPtr, char *queue, int shares)
+{
+    struct hShareData *hData = NULL;
+    struct qShareData *qData = NULL;
+    struct qShareData *qPtr = NULL;
+    hEnt *he = NULL;
+    hEnt *qe = NULL;
+    hEnt *hashEntryPtr = NULL;
+    sTab hashSearchPtr;
+    int  new;
+
+    if (!hPtr->affinity
+        && !daemonParams[SBD_BIND_CPU].paramValue) {
+        ls_syslog(LOG_WARNING, "\
+%s: HOSTS_SHARES requires SBD_BIND_CPU=y in lsb.conf or AFFINITY=y for host <%s> in lsb.hosts; ignoring HOSTS_SHARES of host <%s> for queue <%s>",
+                  __func__, hPtr->host, hPtr->host, queue);
+        return;
+    }
+
+    if (hShareTab.numEnts == 0)
+        h_initTab_(&hShareTab, numofhosts());
+
+    he = h_addEnt_(&hShareTab, hPtr->host, &new);
+    if (new) {
+        hData = my_calloc(1,
+                          sizeof(struct hShareData),
+                          "make_hsacct");
+        hData->host = safeSave(hPtr->host);
+        hData->total = 0;
+        hData->qAcct= my_calloc(1,
+                                sizeof(struct hTab),
+                                "make_hsacct");
+        h_initTab_(hData->qAcct, numofqueues);
+        he->hData = hData;
+    } else {
+        hData = (struct hShareData *)he->hData;
+    }
+
+    qe = h_addEnt_(hData->qAcct, queue, &new);
+    if (new) {
+        qData = my_calloc(1,
+                          sizeof(struct qShareData),
+                          "make_hsacct");
+        qData->queue = safeSave(queue);
+        qData->shares = shares;
+        hData->total += shares;
+        qe->hData = qData;
+
+        /* re-build share ratio */
+        hashEntryPtr = h_firstEnt_(hData->qAcct, &hashSearchPtr);
+        while (hashEntryPtr) {
+            qPtr = (struct qShareData *) hashEntryPtr->hData;
+            qPtr->dshares = ((double)qPtr->shares)/hData->total;
+            hashEntryPtr = h_nextEnt_(&hashSearchPtr);
+        }
     }
 }
 

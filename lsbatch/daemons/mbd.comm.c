@@ -126,7 +126,8 @@ start_ajob (struct jData *jDataPtr,
         + jobSpecs.numToHosts * MAXHOSTNAMELEN
         + jobSpecs.thresholds.nThresholds
         *jobSpecs.thresholds.nIdx * 2 * sizeof (float)
-        + jobSpecs.nxf * sizeof (struct xFile) + jobSpecs.eexec.len;
+        + jobSpecs.nxf * sizeof (struct xFile) + jobSpecs.eexec.len
+        + sizeof(float);
     for (i = 0; i < jobSpecs.numEnv; i++)
         buflen += strlen(jobSpecs.env[i]);
     buflen = (buflen * 4) / 4;
@@ -218,7 +219,8 @@ switch_job (struct jData *jDataPtr, int options)
         + jobSpecs.numToHosts * MAXHOSTNAMELEN
         + jobSpecs.thresholds.nThresholds
         * jobSpecs.thresholds.nIdx * 2 * sizeof (float)
-        + jobSpecs.nxf * sizeof (struct xFile);
+        + jobSpecs.nxf * sizeof (struct xFile)
+        + sizeof(float);
     buflen = (buflen * 4) / 4;
 
     request_buf = (char *) my_malloc (buflen, fname);

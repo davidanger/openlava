@@ -279,6 +279,14 @@ main(int argc, char **argv)
         }
     }
 
+    /* Check if binding to cpus is enabled
+     */
+    if (daemonParams[SBD_BIND_CPU].paramValue) {
+        ls_syslog(LOG_INFO, "\
+%s: cpu binding via sched affinity is enabled", __func__);
+        init_cores();
+    }
+
     now = time(NULL);
 
     for (i = 0; i < 8; i++)
@@ -303,15 +311,6 @@ main(int argc, char **argv)
 
     sinit();
     ls_syslog(LOG_INFO, "%s: sbatchd (re-)started", __func__);
-
-    /* Check if binding to cpus is enabled
-     */
-    if (daemonParams[SBD_BIND_CPU].paramValue
-        || hostAffinity) {
-        ls_syslog(LOG_INFO, "\
-%s: cpu binding via sched affinity is enabled", __func__);
-        init_cores();
-    }
 
     getLSFAdmins_();
 
@@ -844,7 +843,6 @@ init_sstate(void)
     rusageUpdateRate = sbdPackage.rusageUpdateRate;
     rusageUpdatePercent = sbdPackage.rusageUpdatePercent;
     jobTerminateInterval = sbdPackage.jobTerminateInterval;
-    hostAffinity = sbdPackage.affinity;
 
     for (i = 0; i < sbdPackage.nAdmins; i++)
         FREEUP(sbdPackage.admins[i]);

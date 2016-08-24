@@ -274,6 +274,11 @@ handleNewJobArray(struct jData *jarray,
                                           jarray->userName,
                                           jarray->qPtr->queue);
 
+    if (!jarray->hqPtr && jarray->numHostPtr > 0)
+        jarray->hqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_HOST,
+                                          jarray->hPtr[0]->host,
+                                          jarray->qPtr->queue);
+
     if (jarray->shared->jobBill.options2 & SUB2_HOLD) {
         userPending = 1;
     }

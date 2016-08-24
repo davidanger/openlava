@@ -2184,13 +2184,22 @@ addJob(struct jobSpecs *jobSpecs, int mbdVersion)
 
     if (daemonParams[SBD_BIND_CPU].paramValue
             || hostAffinity) {
-        int *num;
+        int num;
+        int *cores = NULL;
 
-        num = find_bound_core(jobSpecs->jobPid);
-        ls_syslog(LOG_DEBUG, "\
-%s: job %d pid %d bound to core %d", __func__, jobSpecs->jobId,
-                  jobSpecs->jobPid, num);
-        jp->core_num = num;
+        cores = find_bound_core(jobSpecs->jobPid, &num);
+        if (num > 0 && cores) {
+            ls_syslog(LOG_DEBUG, "\
+%s: job %d pid %d bound to core [%s]", __func__, jobSpecs->jobId,
+                      jobSpecs->jobPid, covert_cores_to_str(num, cores));
+            jp->cores = cores;
+            jp->numCores = num;
+            if (jp->jobSpecs.hostShares > 0)
+                set_core_shares(jp->jobSpecs.queue,
+                                jp->jobSpecs.hostShares,
+                                num,
+                                cores);
+        }
     }
 
     if (jp->jobSpecs.jAttrib & Q_ATTRIB_EXCLUSIVE)
@@ -2376,9 +2385,13 @@ jobGone(struct jobCard *jp)
 
     /* Clean up the allocated core
      */
-    if (jp->core_num != NULL) {
-        free_core(jp->jobSpecs.numToHosts, jp->core_num);
-        FREEUP(jp->core_num);
+    if (jp->cores != NULL) {
+        free_core(jp->numCores, jp->cores, false);
+        FREEUP(jp->cores);
+        jp->numCores= 0;
+
+        if (jp->jobSpecs.hostShares > 0)
+            free_core_shares(jp->jobSpecs.queue);
     }
 
     if (jp->jobSpecs.actPid == 0 && jp->exitPid == -1) {
@@ -2650,7 +2663,7 @@ deallocJobCard(struct jobCard *jobCard)
     freeWeek (jobCard->week);
     freeToHostsEtc (&jobCard->jobSpecs);
 
-    FREEUP(jobCard->core_num);
+    FREEUP(jobCard->cores);
 
     if (jobCard->runRusage.npgids > 0) {
         FREEUP(jobCard->runRusage.pgid);
@@ -2761,6 +2774,7 @@ saveSpecs (struct jobSpecs *jobSpecs, struct jobSpecs *specs)
     jobSpecs->schedHostType = safeSave (specs->schedHostType);
     if (specs->execHosts != NULL)
         jobSpecs->execHosts = safeSave (specs->execHosts);
+    jobSpecs->hostShares= specs->hostShares;
 
 }
 
@@ -3871,7 +3885,8 @@ initJobCard(struct jobCard *jp, struct jobSpecs *jobSpecs, int *reply)
 
     jp->postJobStarted = 0;
     jp->userJobSucc = FALSE;
-    jp->core_num = NULL;
+    jp->cores = NULL;
+    jp->numCores= 0;
 
     return 0;
 }
@@ -4110,11 +4125,20 @@ select_cpu_to_bind(struct jobCard *jPtr)
         && !hostAffinity)
         return NULL;
 
-    selected = find_free_core(jPtr->jobSpecs.numToHosts);
+    if (jPtr->jobSpecs.hostShares > 0) {
+        selected = get_core_shares(jPtr->jobSpecs.queue,
+                                   jPtr->jobSpecs.hostShares,
+                                   &jPtr->numCores);
+    } else {
+        selected = find_free_core(jPtr->jobSpecs.numToHosts);
+        jPtr->numCores = jPtr->jobSpecs.numToHosts;
+    }
+
     if (!selected) {
         ls_syslog(LOG_ERR, "\
 %s: failed to find free core for job %d", __func__,
                   jPtr->jobSpecs.jobId);
+        jPtr->numCores = 0;
     }
     return selected;
 }
@@ -4130,7 +4154,7 @@ setup_cpu_bind(struct jobCard *jPtr, int* selected)
         return;
 
     cc = bind_to_core(jPtr->jobSpecs.jobPid,
-                      jPtr->jobSpecs.numToHosts,
+                      jPtr->numCores,
                       selected);
     if (cc < 0) {
         ls_syslog(LOG_ERR, "\
@@ -4146,5 +4170,5 @@ s: job %d pid %d bound to core %d", __func__, jPtr->jobSpecs.jobId,
                   jPtr->jobSpecs.jobPid, selected[0]);
     }
 
-    jPtr->core_num = selected;
+    jPtr->cores = selected;
 }

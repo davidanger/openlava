@@ -80,5 +80,6 @@ extern int sshare_distribute_slots(struct tree_ *,
 extern int sshare_distribute_own_slots(struct tree_ *,
                                        uint32_t);
 extern void sshare_sort_tree_by_ran_job(struct tree_ *);
+extern void tokenize(char *);
 
 #endif /* _SSHARE_HEADER_ */

@@ -182,6 +182,24 @@
 # 1/4 of the queue slots. The shares should be further subdivided to users
 # in lsb.users.
 
+# HOSTS_SHARES is used to control how many CPU cores of a host should be
+# bound to the jobs from a particular queue.
+# The value of HOSTS_SHARES consists of one or more
+# [hostname, share] | [hostgroup, share] | [all, share] pairs;
+# e.g., HOSTS_SHARES = [[node1, 5] [group1, 10]] or HOSTS_SHARES = [all, 50].
+# The actual number of CPU cores that will be allocated to a particular queue
+# will be derived from the proportion of the total number of shares, e.g.,
+# HOSTS_SHARES = [node1, 5] for queue q1, and HOSTS_SHARES = [node1, 10] for queue q2,
+# in this case 5/(5+15)=1/3 CPU cores of node1 are bound to jobs from queue q1,
+# and 10/(5+15)=2/3 CPU cores of node1 are bound to jobs from queue q2.
+# By default, if CPU binding is enabled globally by configuring
+# SBD_BIND_CPU=y in lsf.conf; or by configuring the AFFINITY parameter for
+# individual hosts in the lsb.hosts, a CPU core is exclusively bound to a job.
+# HOSTS_SHARES selects a limited number of CPU cores that are bound to jobs
+# from a particular queue, and the CPU cores are shared by these jobs.
+# If HOSTS_SHARES is configured, its CPU binding policy overrides the default policy
+# on the specified hosts.
+
 Begin Queue
 QUEUE_NAME   = normal
 PRIORITY     = 30
@@ -209,6 +227,7 @@ NICE         = 20
 #REQUEUE_EXIT_VALUES = 55 34 78
 #ROUND_ROBIN_POLICY = y
 #FAIRSHARE = USER_SHARES[[G1,1] [G2,1]]
+#HOSTS_SHARES = [all, 5]
 DESCRIPTION  = For normal low priority jobs, running only if hosts are \
 lightly loaded.
 End Queue
@@ -241,6 +260,7 @@ End Queue
 #PRE_EXEC     = /usr/local/lsf/misc/testq_pre >> /tmp/pre.out
 #POST_EXEC    = /usr/local/lsf/misc/testq_post |grep -v "Hey"
 #REQUEUE_EXIT_VALUES = 55 34 78
+#HOSTS_SHARES = [all, 10]
 #DESCRIPTION   = For owners of some machines. Only users listed in the HOSTS\
 #section can submit jobs to this queue.
 #End Queue

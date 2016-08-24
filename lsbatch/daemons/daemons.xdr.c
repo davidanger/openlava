@@ -58,6 +58,7 @@ xdr_jobSpecs (XDR *xdrs, struct jobSpecs *jobSpecs, struct LSFHeader *hdr)
         jobSpecs->loginShell = NULL;
         jobSpecs->schedHostType= NULL;
         jobSpecs->execHosts = NULL;
+        jobSpecs->hostShares = 0;
     }
 
     if (xdrs->x_op == XDR_FREE) {
@@ -399,6 +400,13 @@ xdr_jobSpecs (XDR *xdrs, struct jobSpecs *jobSpecs, struct LSFHeader *hdr)
     if (!(xdr_string(xdrs, &sp[0], MAX_LSB_NAME_LEN))) {
         ls_syslog(LOG_ERR, I18N_FUNC_S_FAIL, fname,
                   "xdr_string", "prepostUsername");
+        return false;
+    }
+
+    if (!xdr_float(xdrs, &jobSpecs->hostShares)) {
+        ls_syslog(LOG_ERR, I18N_JOB_FAIL_S_S, fname,
+            lsb_jobid2str(tmpJobId),
+            "xdr_float", "hostShares");
         return false;
     }
 

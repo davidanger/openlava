@@ -400,6 +400,11 @@ handleNewJob(struct jData *jpbw, int job, int eventTime)
                                         jpbw->userName,
                                         jpbw->qPtr->queue);
 
+    if (!jpbw->hqPtr && jpbw->numHostPtr > 0)
+        jpbw->hqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_HOST,
+                                        jpbw->hPtr[0]->host,
+                                        jpbw->qPtr->queue);
+
     putOntoTree(jpbw, job);
 
     if (mSchedStage != M_STAGE_REPLAY) {
@@ -2008,6 +2013,7 @@ sbatchdJobs(struct sbdPackage *sbdPackage, struct hData *hData)
                 + strlen (jobSpecs->loginShell)
                 + strlen (jobSpecs->schedHostType)
                 + strlen (jobSpecs->execHosts)
+                + sizeof(float)
                 + 10;
 
             for (i = 0; i < jobSpecs->numToHosts; i++) {
@@ -2429,6 +2435,7 @@ packJobSpecs(struct jData *jDataPtr, struct jobSpecs *jobSpecs)
         jobSpecs->commandSpool[0] = '\0';
     }
     jobSpecs->userPriority = jDataPtr->shared->jobBill.userPriority;
+    jobSpecs->hostShares = get_host_shares(jDataPtr->hPtr[0]->host, jDataPtr->qPtr->queue);
 }
 
 void
@@ -3515,6 +3522,11 @@ handleRequeueJob(struct jData *jData, time_t requeueTime)
                                              jData->userName,
                                              jData->qPtr->queue);
 
+        if (!jData->hqPtr && jData->numHostPtr > 0)
+            jData->hqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_HOST,
+                                             jData->hPtr[0]->host,
+                                             jData->qPtr->queue);
+
         updQaccount(jData, jData->shared->jobBill.maxNumProcessors,
                     jData->shared->jobBill.maxNumProcessors, 0, 0, 0, 0);
         updUserData(jData, jData->shared->jobBill.maxNumProcessors,
@@ -4587,6 +4599,7 @@ initJData(struct jShared  *shared)
     job->hPtr = NULL;
     job->pqPtr = NULL;
     job->uqPtr = NULL;
+    job->hqPtr = NULL;
     job->numHostPtr = 0;
     job->numAskedPtr = 0;
     job->askedPtr = NULL;
@@ -6058,6 +6071,10 @@ checkJobParams(struct jData *job, struct submitReq *subReq,
     job->uqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_USER,
                                    job->userName,
                                    job->qPtr->queue);
+    if (job->numHostPtr > 0)
+        job->hqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_HOST,
+                                       job->hPtr[0]->host,
+                                       job->qPtr->queue);
 
     return LSBE_NO_ERROR;
 }

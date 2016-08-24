@@ -279,6 +279,7 @@ struct jData {
     struct  hData **hPtr;
     struct  resData *pqPtr;  /* res account of project on queue */
     struct  resData *uqPtr;  /* res account of user on queue */
+    struct  resData *hqPtr;  /* res account of host on queue */
     int     numHostPtr;
     struct  askedHost *askedPtr;
     int     numAskedPtr;
@@ -674,6 +675,22 @@ struct consumerData {
     struct hTab         *rAcct;
 };
 
+/* share account of each queue
+ */
+struct qShareData {
+    char    *queue;    /* queue name */
+    int     shares;    /* shares as configured */
+    double  dshares;   /* computed share ratio */
+};
+
+/* host share for cpu binding
+*/
+struct hShareData {
+    char    *host;     /* host name */
+    int     total;     /* total number of shares */
+    struct hTab *qAcct; /* account of shares per queue */
+};
+
 typedef enum {
     DPT_AND             = 0,
     DPT_OR              = 1,
@@ -972,6 +989,7 @@ extern struct resLimitConf     *limitConf;
 extern struct hTab             pDataTab;
 extern struct hTab             uDataTab;
 extern struct hTab             hDataTab;
+extern struct hTab             hShareTab;
 
 extern void                 pollSbatchds(int);
 extern void                 hStatChange(struct hData *, int status);
@@ -1308,6 +1326,7 @@ extern int                  checkUsers(struct infoReq *,
                                        struct userInfoReply *);
 extern void                 checkParams (struct infoReq *,
                                          struct parameterInfo *);
+extern double               get_host_shares(char *, char *);
 extern void                 mbdDie(int);
 extern int                  isManager (char *);
 extern int                  isAuthManager (struct lsfAuth *);

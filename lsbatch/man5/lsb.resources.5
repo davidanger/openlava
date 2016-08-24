@@ -227,6 +227,142 @@ Undefined.
 .PP
 .PP
 \fBJOBS\fR \fB=\fR \fI20\fR
+.SH Examples of Limit Section
+.BR
+.PP
+.SS Example 1: disallow non-member projects to use a particular queue
+.BR
+.PP
+
+.PP
+Begin Limit
+.br
+NAME=limit1
+.br
+PROJECTS=all ~p1 ~p2 ~p3
+.br
+QUEUES=priority idle
+.br
+SLOTS=0
+.br
+End Limit
+.PP
+.SS Example 2: limit number of jobs per project
+.BR
+.PP
+
+.PP
+Begin Limit
+.br
+NAME=limit2
+.br
+PER_PROJECT=p1 p2
+.br
+QUEUES=all ~idle
+.br
+JOBS=20
+.br
+End Limit
+.PP
+.SS Example 3: only allow certain users to use a hostgroup
+.BR
+.PP
+
+.PP
+Begin Limit
+.br
+NAME=limit3
+.br
+USERS=all ~david ~wlu
+.br
+HOSTS=group0
+.br
+SLOTS=0
+.br
+End Limit
+.PP
+.SS Example 4: specify which projects are allowed to use certain hostgroups from a certain queue
+.BR
+.PP
+
+.PP
+Begin Limit
+.br
+NAME=limit4
+.br
+PROJECTS=all ~p1 ~p2
+.br
+HOSTS=host0 host1
+.br
+QUEUES=priority
+.br
+SLOTS=0
+.br
+End Limit
+.PP
+.SS Example 5: slot limit for each project
+.BR
+.PP
+
+.PP
+Begin Limit
+.br
+NAME = Projectlimit
+.br
+PER_PROJECTS = all
+.br
+SLOTS = 300
+.br
+End Limit
+.PP
+.SS Example 6: slot limit for each user
+.BR
+.PP
+
+.PP
+Begin Limit
+.br
+NAME = nonG1usersLimit
+.br
+PER_USER = all ~G1
+.br
+SLOTS = 100
+.br
+End Limit
+.PP
+.SS Example 7: time-window based slot limit for each user
+.BR
+.PP
+
+.PP
+Begin Limit
+.br
+NAME = G1userslimits
+.br
+PER_USER = G1
+.br
+QUEUES = regression low
+.br
+SLOTS = [200 09:00-17:00] [100 17:00-09:00]
+.br
+End Limit
+.PP
+.SS Example 8: slot limit per host from specific queue
+.BR
+.PP
+
+.PP
+Begin Limit
+.br
+NAME = PerHostLimit
+.br
+PER_HOST = hostGrp1
+.br
+QUEUES = low
+.br
+SLOTS = 12
+.br
+End Limit
 .SH SEE ALSO
 .BR
 .PP

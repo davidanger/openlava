@@ -3925,7 +3925,8 @@ do_Queues(struct lsConf *conf,
 #define QKEY_PREEMPTION info->numIndx + 49
 #define QKEY_OWNERSHIP info->numIndx + 50
 #define QKEY_SLOT_MEMORY_RESERVE info->numIndx + 51
-#define KEYMAP_SIZE info->numIndx+53  /* This must be the last offset by 2 */
+#define QKEY_HOSTS_SHARES info->numIndx + 52
+#define KEYMAP_SIZE info->numIndx+54  /* This must be the last offset by 2 */
 
     struct queueInfoEnt queue;
     char *linep;
@@ -3997,6 +3998,7 @@ do_Queues(struct lsConf *conf,
     keylist[QKEY_PREEMPTION].key = "PREEMPTION";
     keylist[QKEY_OWNERSHIP].key = "OWNERSHIP";
     keylist[QKEY_SLOT_MEMORY_RESERVE].key = "SLOT_MEMORY_RESERVE";
+    keylist[QKEY_HOSTS_SHARES].key = "HOSTS_SHARES";
     keylist[KEYMAP_SIZE - 1].key = NULL;
 
     initQueueInfo(&queue);
@@ -4839,6 +4841,20 @@ do_Queues(struct lsConf *conf,
             }
         }
 
+        if (keylist[QKEY_HOSTS_SHARES].val != NULL
+            && strcmp(keylist[QKEY_HOSTS_SHARES].val, "")) {
+            queue.hostshare= putstr_(keylist[QKEY_HOSTS_SHARES].val);
+            if (queue.hostshare == NULL) {
+                ls_syslog(LOG_ERR, I18N_FUNC_D_FAIL_M, __func__,
+                          "malloc",
+                          strlen(keylist[QKEY_HOSTS_SHARES].val)+1);
+                lsberrno = LSBE_NO_MEM;
+                freekeyval(keylist);
+                freeQueueInfo(&queue);
+                return FALSE;
+            }
+        }
+
         if (info->numIndx
             && (queue.loadSched = calloc(info->numIndx,
                                          sizeof(float *))) == NULL) {
@@ -4938,6 +4954,7 @@ freeQueueInfo(struct queueInfoEnt *qp)
     FREEUP(qp->terminateActCmd);
     FREEUP(qp->fairshare);
     FREEUP(qp->ownership);
+    FREEUP(qp->hostshare);
 }
 
 static void

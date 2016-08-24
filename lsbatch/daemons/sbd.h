@@ -106,7 +106,8 @@ struct jobCard {
     char   *spooledExec;
     char   postJobStarted;
     char   userJobSucc;
-    int    *core_num;    /* core numbers the job is bound to */
+    int    *cores;    /* an array of core index that the job is bound to */
+    int    numCores;  /* number of bound cores */
 };
 
 /* openlava core representation
@@ -137,12 +138,17 @@ typedef struct numa_obj {
     int bound;              /* number of bound processes */
 } numa_obj_t;
 
-
 typedef enum {
     NO_SIGLOG,
     SIGLOG
 } logType;
 
+struct share_core {
+    char   *queue;
+    float  shares;
+    int    num;
+    int    *cores;
+};
 
 #define JOB_RUNNING(jp) (((jp)->jobSpecs.jStatus & JOB_STAT_RUN) && \
                           (JOB_STARTED(jp)))
@@ -254,7 +260,7 @@ extern struct clientNode *clientList;
 extern struct bucket     *jmQueue;
 
 extern int statusChan;
-
+extern int num_numa_cores;
 
 extern void start_master(void);
 extern void shutDownClient(struct clientNode *);
@@ -352,9 +358,13 @@ extern void exeActCmd(struct jobCard *jp, char *actCmd, char *exitFile);
 extern void exeChkpnt(struct jobCard *jp, int chkFlags, char *exitFile);
 extern void init_cores(void);
 extern int *find_free_core(int num);
-extern void free_core(int, int*);
+extern void free_core(int, int*, int);
 extern int bind_to_core(pid_t, int, int*);
-extern int *find_bound_core(pid_t);
+extern int *find_bound_core(pid_t, int *);
+extern int* get_core_shares(char *, float, int*);
+extern void set_core_shares(char *, float, int, int *);
+extern void free_core_shares(char *);
+extern char *covert_cores_to_str(int, int *);
 
 #ifdef HAVE_HWLOC_H
 extern int init_numa_topology(void);
@@ -362,8 +372,8 @@ extern void init_numa_cores(void);
 extern int *find_free_numa_core(int);
 extern int bind_to_numa_core(pid_t, int, int*);
 extern void bind_to_numa_mem(int*, int);
-extern void free_numa_core(int, int*);
-extern int *find_numa_bound_core(pid_t);
+extern void free_numa_core(int, int*, int);
+extern int *find_numa_bound_core(pid_t, int*);
 #endif
 extern void updateJUsage(struct jobCard *, struct jRusage *);
 extern void copyPidInfo(struct jobCard *, struct jRusage *);

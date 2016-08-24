@@ -36,7 +36,6 @@ static struct share_acct *get_sacct(const char *,
 static uint32_t compute_slots(struct tree_node_ *, uint32_t, uint32_t);
 static void sort_siblings(struct tree_node_ *,
                           int (*cmp)(const void *, const void *));
-static void tokenize(char *);
 static char *get_next_word(char **);
 static int node_cmp(const void *, const void *);
 static int node_cmp2(const void *, const void *);
@@ -836,7 +835,7 @@ pryc:
     return sacct;
 }
 
-static void
+void
 tokenize(char *p)
 {
     int cc;

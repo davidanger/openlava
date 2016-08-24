@@ -35,8 +35,8 @@
  */
 static numa_obj_t *numaTopology;
 static numa_obj_t **numaCores;
-static int num_numa_cores;
 static hwloc_topology_t hwlocTopology;
+int num_numa_cores;
 
 /* alloc_numa_obj()
  */
@@ -188,7 +188,7 @@ init_numa_topology(void)
     /* get 0 node means OS is NUMA-unaware
      * get 1 node means OS is non-NUMA but NUMA-aware; everything is under the same node
      */
-    if (hwloc_get_nbobjs_by_type(hwlocTopology, HWLOC_OBJ_NODE) <= 1) {
+    if (hwloc_get_nbobjs_by_type(hwlocTopology, HWLOC_OBJ_NODE) < 1) {
         /* Destroy topology object. */
         hwloc_topology_destroy(hwlocTopology);
         return 0;
@@ -230,7 +230,8 @@ bind_to_numa_core(pid_t pid, int num, int* cores_idx)
                                cpuset,
                                HWLOC_CPUBIND_PROCESS)) {
         ls_syslog(LOG_ERR, "\
-%s: hwloc_set_proc_cpubind() failed binding process %d to numa cores %m", __func__, pid);
+%s: hwloc_set_proc_cpubind() failed binding process %d to numa cores [%s]: %m",
+                 __func__, pid, covert_cores_to_str(num, cores_idx));
         hwloc_bitmap_free(cpuset);
         return -1;
     }
@@ -239,6 +240,12 @@ bind_to_numa_core(pid_t pid, int num, int* cores_idx)
     for (i = 0; i < num; i++) {
         idx = cores_idx[i];
         numaCores[idx]->bound++;
+
+        /* this core is shared by multiple processes,
+         * don't overcount used of the core and its parents.
+         */
+        if (numaCores[idx]->bound > 1)
+            continue;
         numaCores[idx]->used++;
         numaCores[idx]->parent->used++;   /* socket */
         numaCores[idx]->parent->parent->used++; /* node */
@@ -250,7 +257,7 @@ bind_to_numa_core(pid_t pid, int num, int* cores_idx)
 /* free_numa_core()
  */
 void
-free_numa_core(int num, int* core_idx)
+free_numa_core(int num, int* core_idx, int reset)
 {
     int i, idx;
 
@@ -258,22 +265,29 @@ free_numa_core(int num, int* core_idx)
         idx = core_idx[i];
         if (idx < 0 || idx > num_numa_cores)
             continue;
-        numaCores[idx]->bound--;
-        numaCores[idx]->used--;
-        numaCores[idx]->parent->used--;   /* socket */
-        numaCores[idx]->parent->parent->used--; /* node */
-        numaCores[idx]->parent->parent->parent->used--;  /* host */
+
+        if (reset)
+            numaCores[idx]->bound = 0;
+        else
+            numaCores[idx]->bound--;
+
+        if (numaCores[idx]->bound == 0) {
+            numaCores[idx]->used--;
+            numaCores[idx]->parent->used--;   /* socket */
+            numaCores[idx]->parent->parent->used--; /* node */
+            numaCores[idx]->parent->parent->parent->used--;  /* host */
+        }
     }
 }
 
 /* find_numa_bound_core()
  */
 int*
-find_numa_bound_core(pid_t pid)
+find_numa_bound_core(pid_t pid, int *num)
 {
     hwloc_bitmap_t cpubind_set;
     hwloc_obj_t obj, pre;
-    int i, idx, num;
+    int i, idx;
     int* cores_idx;
 
     /* get the current physical binding of process pid */
@@ -285,13 +299,13 @@ find_numa_bound_core(pid_t pid)
         return NULL;
     }
 
-    num = hwloc_get_nbobjs_inside_cpuset_by_type(hwlocTopology, cpubind_set, HWLOC_OBJ_CORE);
+    *num = hwloc_get_nbobjs_inside_cpuset_by_type(hwlocTopology, cpubind_set, HWLOC_OBJ_CORE);
     /* no object for cpu binding exists inside cpubind_set */
-    if (num == 0) {
+    if (*num == 0) {
         hwloc_bitmap_free(cpubind_set);
         return NULL;
     }
-    cores_idx = calloc(num, sizeof(int));
+    cores_idx = calloc(*num, sizeof(int));
 
     /* get the cores where a process ran */
     pre = NULL;
@@ -299,8 +313,8 @@ find_numa_bound_core(pid_t pid)
     while ((obj = hwloc_get_next_obj_inside_cpuset_by_type(hwlocTopology, cpubind_set, HWLOC_OBJ_CORE, pre))) {
         idx = obj->logical_index;
         cores_idx[i++] = idx;
-        if (numaCores[idx]->bound == 0) {
-            numaCores[idx]->bound++;
+        numaCores[idx]->bound++;
+        if (numaCores[idx]->bound == 1) {
             numaCores[idx]->used++;
             numaCores[idx]->parent->used++;   /* socket */
             numaCores[idx]->parent->parent->used++; /* node */

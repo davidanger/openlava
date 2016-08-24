@@ -131,6 +131,10 @@ struct hTab uDataTab;
  */
 struct hTab hDataTab;
 
+/* Hash table to host share on queues.
+ */
+struct hTab hShareTab;
+
 char   *masterHost = NULL;
 char   *clusterName = NULL;
 char   *defaultQueues = NULL;

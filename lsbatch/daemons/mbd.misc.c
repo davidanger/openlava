@@ -262,6 +262,10 @@ updSwitchJob (struct jData *jp, struct qData *qfp, struct qData *qtp,
         jp->uqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_USER,
                                       jp->userName,
                                       jp->qPtr->queue);
+        if (jp->numHostPtr > 0)
+            jp->hqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_HOST,
+                                          jp->hPtr[0]->host,
+                                          jp->qPtr->queue);
 
         updResCounters (jp, jp->jStatus & ~JOB_STAT_RESERVE);
         jp->qPtr = qtp;
@@ -271,6 +275,10 @@ updSwitchJob (struct jData *jp, struct qData *qfp, struct qData *qtp,
         jp->uqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_USER,
                                       jp->userName,
                                       jp->qPtr->queue);
+        if (jp->numHostPtr > 0)
+            jp->hqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_HOST,
+                                          jp->hPtr[0]->host,
+                                          jp->qPtr->queue);
         jp->jStatus &= ~JOB_STAT_RESERVE;
         reserved = TRUE;
     }
@@ -284,6 +292,10 @@ updSwitchJob (struct jData *jp, struct qData *qfp, struct qData *qtp,
             jp->uqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_USER,
                                           jp->userName,
                                           jp->qPtr->queue);
+            if (jp->numHostPtr > 0)
+                jp->hqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_HOST,
+                                              jp->hPtr[0]->host,
+                                              jp->qPtr->queue);
 
             if (mSchedStage != M_STAGE_REPLAY) {
                 updQaccount (jp, -oldNumReq, -oldNumReq, 0, 0, 0, 0);
@@ -298,6 +310,10 @@ updSwitchJob (struct jData *jp, struct qData *qfp, struct qData *qtp,
             jp->uqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_USER,
                                           jp->userName,
                                           jp->qPtr->queue);
+            if (jp->numHostPtr > 0)
+                jp->hqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_HOST,
+                                              jp->hPtr[0]->host,
+                                              jp->qPtr->queue);
 
             if (mSchedStage != M_STAGE_REPLAY) {
                 updQaccount (jp, numReq, numReq, 0, 0, 0, 0);
@@ -315,6 +331,10 @@ updSwitchJob (struct jData *jp, struct qData *qfp, struct qData *qtp,
             jp->uqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_USER,
                                           jp->userName,
                                           jp->qPtr->queue);
+            if (jp->numHostPtr > 0)
+                jp->hqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_HOST,
+                                              jp->hPtr[0]->host,
+                                              jp->qPtr->queue);
 
             if (mSchedStage != M_STAGE_REPLAY) {
                 updQaccount (jp, -num, 0, -num, 0, 0, 0);
@@ -330,6 +350,10 @@ updSwitchJob (struct jData *jp, struct qData *qfp, struct qData *qtp,
             jp->uqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_USER,
                                           jp->userName,
                                           jp->qPtr->queue);
+            if (jp->numHostPtr > 0)
+                jp->hqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_HOST,
+                                              jp->hPtr[0]->host,
+                                              jp->qPtr->queue);
 
             if (mSchedStage != M_STAGE_REPLAY) {
                 updQaccount (jp, num, 0, num, 0, 0, 0);
@@ -348,6 +372,10 @@ updSwitchJob (struct jData *jp, struct qData *qfp, struct qData *qtp,
             jp->uqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_USER,
                                           jp->userName,
                                           jp->qPtr->queue);
+            if (jp->numHostPtr > 0)
+                jp->hqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_HOST,
+                                              jp->hPtr[0]->host,
+                                              jp->qPtr->queue);
 
             if (mSchedStage != M_STAGE_REPLAY) {
                 updQaccount (jp, -num, 0, 0, -num, 0, 0);
@@ -363,6 +391,10 @@ updSwitchJob (struct jData *jp, struct qData *qfp, struct qData *qtp,
             jp->uqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_USER,
                                           jp->userName,
                                           jp->qPtr->queue);
+            if (jp->numHostPtr > 0)
+                jp->hqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_HOST,
+                                              jp->hPtr[0]->host,
+                                              jp->qPtr->queue);
 
             if (mSchedStage != M_STAGE_REPLAY) {
                 updQaccount (jp, num, 0, 0, num, 0, 0);
@@ -381,6 +413,10 @@ updSwitchJob (struct jData *jp, struct qData *qfp, struct qData *qtp,
             jp->uqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_USER,
                                           jp->userName,
                                           jp->qPtr->queue);
+            if (jp->numHostPtr > 0)
+                jp->hqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_HOST,
+                                              jp->hPtr[0]->host,
+                                              jp->qPtr->queue);
 
             if (mSchedStage != M_STAGE_REPLAY) {
                 updQaccount (jp, -num, 0, 0, 0, -num, 0);
@@ -396,6 +432,10 @@ updSwitchJob (struct jData *jp, struct qData *qfp, struct qData *qtp,
             jp->uqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_USER,
                                           jp->userName,
                                           jp->qPtr->queue);
+            if (jp->numHostPtr > 0)
+                jp->hqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_HOST,
+                                              jp->hPtr[0]->host,
+                                              jp->qPtr->queue);
 
             if (mSchedStage != M_STAGE_REPLAY) {
                 updQaccount (jp, num, 0, 0, 0, num, 0);
@@ -580,6 +620,7 @@ updLimitSlotData(struct jData *jp, int numJobs, int numPEND,
 {
     struct resData *qp = jp->pqPtr;
     struct resData *uq = jp->uqPtr;
+    struct resData *hq = jp->hqPtr;
 
     if (qp == NULL || uq == NULL)
         return;
@@ -613,6 +654,21 @@ updLimitSlotData(struct jData *jp, int numJobs, int numPEND,
     addValue (&uq->numUSUSPSlots, numUSUSP, jp, (char *)__func__, "numUSUSP");
     addValue (&uq->numRESERVESlots, numRESERVE, jp, (char *)__func__, "numRESERVE");
 
+    if (!hq && jp->numHostPtr > 0) {
+        hq = getLimitUsageData(LIMIT_CONSUMER_PER_HOST,
+                               jp->hPtr[0]->host,
+                               jp->qPtr->queue);
+    }
+
+    if (hq) {
+        addValue (&hq->numSlots, numJobs, jp, (char *)__func__, "numJobs");
+        addValue (&hq->numPENDSlots, numPEND, jp, (char *)__func__, "numPEND");
+        addValue (&hq->numRUNSlots, numRUN, jp, (char *)__func__, "numRUN");
+        addValue (&hq->numSSUSPSlots, numSSUSP, jp, (char *)__func__, "numSSUSP");
+        addValue (&hq->numUSUSPSlots, numUSUSP, jp, (char *)__func__, "numUSUSP");
+        addValue (&hq->numRESERVESlots, numRESERVE, jp, (char *)__func__, "numRESERVE");
+    }
+
     if (logclass & LC_JLIMIT)
         ls_syslog(LOG_DEBUG2,
 "%s: job=%s project=%s user=%s queue=%s numJobs=%d numPEND=%d numRUN=%d numSSUSP=%d numUSUSP=%d numRESERVE=%d",
@@ -638,6 +694,7 @@ updLimitJobData(struct jData *jp, int numJobs, int numPEND,
 {
     struct resData *qp = jp->pqPtr;
     struct resData *uq = jp->uqPtr;
+    struct resData *hq = jp->hqPtr;
 
     if (qp == NULL || uq == NULL)
         return;
@@ -670,6 +727,21 @@ updLimitJobData(struct jData *jp, int numJobs, int numPEND,
     addValue (&uq->numSSUSPJobs, numSSUSP, jp, (char *)__func__, "numSSUSP");
     addValue (&uq->numUSUSPJobs, numUSUSP, jp, (char *)__func__, "numUSUSP");
     addValue (&uq->numRESERVEJobs, numRESERVE, jp, (char *)__func__, "numRESERVE");
+
+    if (!hq && jp->numHostPtr > 0) {
+        hq = getLimitUsageData(LIMIT_CONSUMER_PER_HOST,
+                               jp->hPtr[0]->host,
+                               jp->qPtr->queue);
+    }
+
+    if (hq) {
+        addValue (&hq->numJobs, numJobs, jp, (char *)__func__, "numJobs");
+        addValue (&hq->numPENDJobs, numPEND, jp, (char *)__func__, "numPEND");
+        addValue (&hq->numRUNJobs, numRUN, jp, (char *)__func__, "numRUN");
+        addValue (&hq->numSSUSPJobs, numSSUSP, jp, (char *)__func__, "numSSUSP");
+        addValue (&hq->numUSUSPJobs, numUSUSP, jp, (char *)__func__, "numUSUSP");
+        addValue (&hq->numRESERVEJobs, numRESERVE, jp, (char *)__func__, "numRESERVE");
+    }
 
     if (logclass & LC_JLIMIT)
         ls_syslog(LOG_DEBUG2,
@@ -1410,6 +1482,25 @@ addUserData(char *username, int maxjobs, float pJobLimit,
     userEnt->hData = uData;
 
     return uData;
+}
+
+double
+get_host_shares(char *host, char *queue)
+{
+    struct hShareData *hData = NULL;
+    struct qShareData *qData = NULL;
+    hEnt *he = NULL;
+    hEnt *qe = NULL;
+
+    if ((he = h_getEnt_(&hShareTab, host)) == NULL)
+        return 0;
+
+    hData = (struct hShareData *)he->hData;
+    if ((qe = h_getEnt_(hData->qAcct, queue)) == NULL)
+        return 0;
+
+    qData = (struct qShareData *)qe->hData;
+    return qData->dshares;
 }
 
 void

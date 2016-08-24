@@ -321,6 +321,69 @@ the loan duration.
 The ownership policy cannot be specified together with the fairshare
 policy in the same queue. The fairshare specified in lsb.users is applied
 within each user group when the ownership scheduling policy is enabled.
+.SH HOSTS_SHARES
+.BR
+.PP
+.SS Syntax
+.BR
+.PP
+.PP
+\fBHOSTS_SHARES = \fR\fI[[host_name,n] [host_group,k] ...] | [all, m]\fR
+.BR
+.PP
+HOSTS_SHARES specifies the proportion of the total number of cores on
+a particular host that will be allocated and bound to jobs in this queue
+through CPU binding.
+.P
+HOSTS_SHARES requires SBD_BIND_CPU=y in lsb.conf or AFFINITY=y for a particular host
+in lsb.hosts. The host must be enabled for CPU binding for HOSTS_SHARES to work.
+By default, a CPU core is exclusively bound to a job. If HOSTS_SHARES is configured,
+multiple jobs can be bound to a single CPU core. If HOSTS_SHARES is configured,
+its CPU binding policy overrides the default policy on the specified hosts.
+.P
+The HOSTS_SHARES expression consists of one or more
+[hostname, share] | [hostgroup, share] | [all, share] pairs. The hostgroup share
+specification indicates the share for each of the host in the hostgroup.
+"all,share" indicates that the queue is allocated "share" for each host that
+belongs to the queue. The individual shares assigned to each queue for a
+particular host are summed and then normalized.
+.P
+For example: node1 has 32 cores; and node2 has 24 cores.
+.P
+Begin Queue
+.br
+QUEUE_NAME   = queue1
+.br
+HOSTS        = node1 node2
+.br
+HOSTS_SHARES = [[node1, 5] [node2, 5]]
+.br
+...
+.br
+End Queue
+.P
+Begin Queue
+.br
+QUEUE_NAME   = queue2
+.br
+HOSTS        = node1 node2
+.br
+HOSTS_SHARES = [node1, 10]
+.br
+...
+.br
+End Queue
+.P
+For jobs running on node1:
+.br
+queue1 shares 1/3(5/(5+10)) of the CPU cores = 32*(1/3) = 10.7 -> 11 CPU cores.
+.br
+queue2 shares 2/3(10/(5+10)) of the CPU cores = 32*(2/3) = 21.3 -> 22 CPU cores;
+however, since the total cannot be more than 32, queue2 is actually bound to only 21 CPU cores.
+.P
+For jobs running on node2:
+.br
+queue1 shares all CPU cores = 24*(5/5) = 24 CPU cores.
 .SH FILELIMIT
 .BR
 .PP

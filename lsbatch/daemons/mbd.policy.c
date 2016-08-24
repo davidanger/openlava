@@ -2923,6 +2923,7 @@ checkResLimit(struct jData *jp, char* hostname)
     char *save_user_def = NULL;
     char *host = NULL;
     char *save_host = NULL;
+    int  per_host = FALSE;
     char *word = NULL;
     int hasMe = FALSE;
     char all[5] = "all";
@@ -2939,7 +2940,7 @@ checkResLimit(struct jData *jp, char* hostname)
         if (limitConf->limits[i].nConsumer <= 0)
             continue;
 
-        per_queue = FALSE;
+        per_queue = per_host = FALSE;
         for (j = 0; j < limitConf->limits[i].nConsumer; j++) {
             if (limitConf->limits[i].consumers[j].consumer == LIMIT_CONSUMER_QUEUES
                     || limitConf->limits[i].consumers[j].consumer == LIMIT_CONSUMER_PER_QUEUE) {
@@ -2952,6 +2953,7 @@ checkResLimit(struct jData *jp, char* hostname)
                 save_project = project;
             } else if (limitConf->limits[i].consumers[j].consumer == LIMIT_CONSUMER_HOSTS
                             || limitConf->limits[i].consumers[j].consumer == LIMIT_CONSUMER_PER_HOST) {
+                per_host = limitConf->limits[i].consumers[j].consumer == LIMIT_CONSUMER_HOSTS ? FALSE : TRUE;
                 host = strdup(limitConf->limits[i].consumers[j].value);
                 save_host = host;
             } else if (limitConf->limits[i].consumers[j].consumer == LIMIT_CONSUMER_USERS
@@ -2992,6 +2994,33 @@ checkResLimit(struct jData *jp, char* hostname)
             }
             if (!hasMe)
                 goto clean4next;
+
+            if (per_host) {
+                if (!jp->hqPtr
+                    || strcmp(hostname, jp->hqPtr->host))
+                    jp->hqPtr = getLimitUsageData(LIMIT_CONSUMER_PER_HOST,
+                                                  hostname,
+                                                  jp->qPtr->queue);
+
+                lr = getActiveLimit(limitConf->limits[i].res, limitConf->limits[i].nRes);
+                if (lr) {
+                    jp->hqPtr->maxSlots = jp->hqPtr->maxJobs = (int) lr->value;
+                    ret = checkIfLimitIsOk(lr,
+                                       LIMIT_CONSUMER_PER_HOST,
+                                       hostname,
+                                       per_queue,
+                                       save_queue,
+                                       jp);
+                    if (!ret) {
+                        FREEUP(save_queue);
+                        FREEUP(save_project);
+                        FREEUP(save_host);
+                        FREEUP(save_user);
+                        FREEUP(save_user_def);
+                        return FALSE;
+                    }
+                }
+            }
         }
 
         /* check if user is allowed to use the queue/host */
@@ -3192,8 +3221,11 @@ checkIfLimitIsOk(struct limitRes *limit,
     if (ctype == LIMIT_CONSUMER_PROJECTS
             || ctype == LIMIT_CONSUMER_PER_PROJECT)
         rPtr = jp->pqPtr;
-    else
+    else if (ctype == LIMIT_CONSUMER_USERS
+                || ctype ==LIMIT_CONSUMER_PER_USER)
         rPtr = jp->uqPtr;
+    else
+        rPtr = jp->hqPtr;
 
     if (limit->res == LIMIT_RESOURCE_SLOTS) {
         if (qtype == LIMIT_CONSUMER_PER_QUEUE)

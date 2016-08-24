@@ -32,6 +32,10 @@ extern int mbdExitCnt;
 static struct ol_core *cores;
 static int num_cores;
 
+/* cpu share on queues
+ */
+struct hTab coreSharesTab;
+
 #ifdef HAVE_HWLOC_H
 static int numa_enabled;
 #endif
@@ -341,6 +345,9 @@ init_cores(void)
         return;
 
 #ifdef HAVE_HWLOC_H
+    if (numa_enabled)
+        return;
+
     /* use numa topology if OS is numa-aware */
     if ((numa_enabled = init_numa_topology()))
         return;
@@ -360,16 +367,13 @@ init_cores(void)
 }
 
 /* find_free_core()
- *
- * bind multiple cores for numa topology
- * only bind 1 core for non-numa
- *
  */
 int*
 find_free_core(int num)
 {
-    int i;
+    int i, j;
     int* selected;
+    int free;
 
 #ifdef HAVE_HWLOC_H
     if (numa_enabled)
@@ -379,28 +383,36 @@ find_free_core(int num)
     if (! cores)
         return NULL;
 
+    free = 0;
     for (i = 0; i < num_cores; i++) {
-        if (cores[i].bound == 0) {
-            selected = calloc(1, sizeof(int));
-            *selected = cores[i].core_num;
-            return selected;
-        }
+        if (cores[i].bound == 0)
+            free++;
     }
 
-    return NULL;
+    /* cannot find required free cores */
+    if (free < num)
+        return NULL;
+
+    selected = calloc(num, sizeof(int));
+    j = 0;
+    for (i = 0; i < num_cores; i++) {
+        if (cores[i].bound == 0) {
+            selected[j++] = cores[i].core_num;
+            if (j == num)
+                break;
+        }
+    }
+    return selected;
 }
 
 /* bind_to_core()
- *
- * bind multiple cores for numa topology
- * only bind 1 core for non-numa
- *
  */
 int
 bind_to_core(pid_t pid, int num, int* selected_cores)
 {
     cpu_set_t  set;
     int cc;
+    int i, j;
 
 #ifdef HAVE_HWLOC_H
     if (numa_enabled)
@@ -411,33 +423,39 @@ bind_to_core(pid_t pid, int num, int* selected_cores)
         return -1;
 
     CPU_ZERO(&set);
-    CPU_SET(selected_cores[0], &set);
+    for (i = 0; i < num; i++) {
+        CPU_SET(selected_cores[i], &set);
+    }
 
     cc = sched_setaffinity(pid, sizeof(cpu_set_t), &set);
     if (cc < 0) {
         ls_syslog(LOG_ERR, "\
-%s: failed binding process %d to cpu %d %m", __func__, pid, selected_cores[0]);
+%s: failed binding process %d to cpu [%s] : %m",
+                   __func__, pid, covert_cores_to_str(num, selected_cores));
         return -1;
     }
-    cores[selected_cores[0]].bound++;
+
+    for (i = 0; i < num_cores; i++) {
+        for (j = 0; j < num; j++) {
+            if (cores[i].core_num == selected_cores[j]) {
+                cores[i].bound++;
+            }
+        }
+    }
 
     return 0;
 }
 
 /* free_core()
- *
- * bind multiple cores for numa topology
- * only bind 1 core for non-numa
- *
  */
 void
-free_core(int num, int* core_num)
+free_core(int num, int* core_num, int reset)
 {
-    int i;
+    int i, j;
 
 #ifdef HAVE_HWLOC_H
     if (numa_enabled)
-        return free_numa_core(num, core_num);
+        return free_numa_core(num, core_num, reset);
 #endif
 
     if (! cores)
@@ -449,29 +467,29 @@ free_core(int num, int* core_num)
         return;
 
     for (i = 0; i < num_cores; i++) {
-        if (cores[i].core_num == core_num[0]) {
-            cores[i].bound--;
-            return;
+        for (j = 0; j < num; j++) {
+            if (cores[i].core_num == core_num[j]) {
+                if (reset)
+                    cores[i].bound = 0;
+                else
+                    cores[i].bound--;
+            }
         }
     }
 }
 
 /* find_bound_core()
- *
- * bind multiple cores for numa topology
- * only bind 1 core for non-numa
- *
  */
 int*
-find_bound_core(pid_t pid)
+find_bound_core(pid_t pid, int *num)
 {
     cpu_set_t set;
-    int cc;
+    int cc, i;
     int* selected_cores;
 
 #ifdef HAVE_HWLOC_H
     if (numa_enabled)
-        return find_numa_bound_core(pid);
+        return find_numa_bound_core(pid, num);
 #endif
 
     if (! cores)
@@ -486,13 +504,179 @@ find_bound_core(pid_t pid)
         return NULL;
     }
 
+    *num = CPU_COUNT(&set);
+    selected_cores = calloc(*num, sizeof(int));
+
+    i = 0;
     for (cc = 0; cc < num_cores; cc++) {
-        if (CPU_ISSET(cc, &set)) {
-            selected_cores = calloc(1, sizeof(int));
-            *selected_cores = cc;
-            return selected_cores;
+        if (CPU_ISSET(cc, &set))
+            selected_cores[i++] = cc;
+    }
+    return selected_cores;
+}
+
+/* get_core_shares()
+ *
+ * select cores based on queue's share;
+ * cores are shared by jobs running in the same queue
+ */
+int*
+get_core_shares(char *queue, float shares, int* num)
+{
+    hEnt *ent = NULL;
+    struct share_core *shareCores = NULL;
+    int  new;
+    int  *coreSet = NULL;
+    int  deserve, actual;
+    int  total;
+    int  i;
+
+    total = num_cores;
+#ifdef HAVE_HWLOC_H
+    if (numa_enabled)
+        total = num_numa_cores;
+#endif
+
+    /* round up reserved core numbers */
+    deserve = (int) ceil(shares * total);
+
+    if (coreSharesTab.numEnts == 0)
+        h_initTab_(&coreSharesTab, total);
+
+    ent = h_addEnt_(&coreSharesTab, queue, &new);
+    if (!new) {
+        shareCores = (struct share_core *) ent->hData;
+        if (deserve == shareCores->num) {
+            *num = shareCores->num;
+            coreSet = calloc(*num, sizeof(int));
+            for (i = 0; i < *num; i++) {
+                coreSet[i] = shareCores->cores[i];
+            }
+            return coreSet;
         }
+
+        /* host share is changed; remove old entry */
+        free_core(shareCores->num, shareCores->cores, true);
+        FREEUP(shareCores->cores);
+        FREEUP(shareCores->queue);
+        FREEUP(shareCores);
     }
 
-    return NULL;
+    /* round up may cause the last queue cannot get
+     * enough share
+     */
+    actual = deserve;
+    while(actual > 0) {
+        if ((coreSet = find_free_core(actual)))
+            break;
+        actual--;
+    }
+
+    if (actual < deserve)
+        ls_syslog(LOG_WARNING, "\
+%s: cannot find engough free cores for queue %s; shares %f total %d deserve %d actual %d",
+                  __func__, queue, shares, total, deserve, actual);
+
+    if (!coreSet) {
+        h_rmEnt_(&coreSharesTab, ent);
+        return NULL;
+    }
+
+    shareCores = calloc(1, sizeof(struct share_core));
+    shareCores->shares = shares;
+    shareCores->queue = strdup(queue);
+    shareCores->num = actual;
+    shareCores->cores = calloc(actual, sizeof(int));
+    for (i = 0; i < shareCores->num; i++)
+        shareCores->cores[i] = coreSet[i];
+    ent->hData = shareCores;
+    *num = actual;
+    return coreSet;
+}
+
+/* set_core_shares()
+ *
+ * set cores that are used by a specific queue
+ */
+void
+set_core_shares(char *queue, float shares, int num, int *cores)
+{
+    hEnt *ent = NULL;
+    struct share_core *shareCores = NULL;
+    int  new;
+    int  total;
+    int  i;
+
+    if (shares <= 0 || num <= 0 || !cores)
+        return;
+
+    if (coreSharesTab.numEnts == 0) {
+        total = num_cores;
+#ifdef HAVE_HWLOC_H
+        if (numa_enabled)
+            total = num_numa_cores;
+#endif
+        h_initTab_(&coreSharesTab, total);
+    }
+
+    ent = h_addEnt_(&coreSharesTab, queue, &new);
+    if (!new) {
+        shareCores = (struct share_core *) ent->hData;
+        if (shareCores->shares == shares)
+            return;
+
+        /* host share is changed; remove old entry */
+        FREEUP(shareCores->cores);
+        FREEUP(shareCores->queue);
+        FREEUP(shareCores);
+    }
+
+    shareCores = calloc(1, sizeof(struct share_core));
+    shareCores->shares = shares;
+    shareCores->queue = strdup(queue);
+    shareCores->num = num;
+    shareCores->cores = calloc(num, sizeof(int));
+    for (i = 0; i < shareCores->num; i++)
+        shareCores->cores[i] = cores[i];
+    ent->hData = shareCores;
+}
+
+void
+free_core_shares(char *queue)
+{
+    struct share_core *share = NULL;
+    hEnt *ent = NULL;
+
+    if (!queue)
+        return;
+
+    ent = h_getEnt_(&coreSharesTab, queue);
+    if (ent) {
+        share = (struct share_core *) ent->hData;
+        if (share) {
+            FREEUP(share->queue);
+            FREEUP(share->cores);
+            FREEUP(share);
+        }
+        h_rmEnt_(&coreSharesTab, ent);
+    }
+}
+
+char *
+covert_cores_to_str(int num, int *cores)
+{
+    static char str[256];
+    char buf[8];
+    int i;
+
+    if (!cores)
+        return NULL;
+
+    for (i = 0; i < num; i++) {
+        sprintf(buf, "%d", cores[i]);
+        if (i != 0)
+            strcat(str, " ");
+        strcat(str, buf);
+    }
+    return str;
 }

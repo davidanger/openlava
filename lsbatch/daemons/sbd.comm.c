@@ -408,6 +408,16 @@ znovu:
                     free(reply_buf);
                 return;
             }
+
+            /* check if cpu binding is enabled
+             */
+            hostAffinity = sbdPackage->affinity;
+            if (hostAffinity) {
+                ls_syslog(LOG_INFO, "\
+%s: cpu binding via sched affinity is enabled", __func__);
+                init_cores();
+            }
+
             numJobs = sbdPackage->numJobs;
 
             for (i = 0; i < numJobs; i++) {

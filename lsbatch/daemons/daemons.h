@@ -292,6 +292,7 @@ struct jobSpecs {
     char  commandSpool[MAXFILENAMELEN];
     int   userPriority;
     char  execUsername[MAX_LSB_NAME_LEN];
+    float hostShares;
 };
 
 struct statusReq {

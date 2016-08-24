@@ -82,7 +82,8 @@ do_newjob(XDR *xdrs, int chfd, struct LSFHeader *reqHdr)
     jp->jobSpecs.subreasons = 0;
     /* Initialize the core number
      */
-    jp->core_num = NULL;
+    jp->cores = NULL;
+    jp->numCores= 0;
 
     if (jp->jobSpecs.jAttrib & Q_ATTRIB_EXCLUSIVE) {
         if (lockHosts (jp) < 0) {
