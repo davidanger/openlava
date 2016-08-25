@@ -549,6 +549,32 @@ this parameter may be set to 0.
 .SS Default
 .BR
 2.0 (seconds)
+.SH PREEMPTABLE_RESOURCES
+.BR
+.SS Syntax
+.BR
+\fBPREEMPTABLE_RESOURCES =\fR "\fIresource ...\fR"
+.SS Description
+.PP
+Configuration to enable resource based job preemption. Only resources defined in
+the resource name list (names separated by spaces)
+can trigger the job preemption.
+.PP
+When a job in a high priority queue is pending because its required resource
+is unavailable, and the resource is defined in PREEMPTABLE_RESOURCES,
+OpenLava will preempt low priority jobs that are using the resource, until
+the resource is available for the high priority job to run.
+This is often used for application license preemption.
+.PP
+To enable the preemptioni policy, the parameter PREEMPTION needs to be set in the
+high priority queue configuration. Please see lsb.queues(5) for the detail.
+.PP
+The resource based job preemption is only triggered when the high priority job
+required resource is not available, the resource is used by low priority jobs,
+and there are free job slots. If there are no free job slots, resource based
+preemption is not triggered.
+.SS Default
+Undefined. Resource based preemption is disabled.
 .SH SBD_SLEEP_TIME
 .BR
 .SS Syntax
