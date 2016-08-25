@@ -220,6 +220,7 @@ know the exact commit.
 -- Fix the parsing algorithm for compact host name.
 -- Fix a bug in bmgroup where by mistake the -s and -r options were dropped.
 -- Update bmgrop and bugroup man pages.
+-- Enlarge the -J name job name to be at leat 1024 characters.
 
 3.2.0
 ======
