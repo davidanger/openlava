@@ -4,6 +4,7 @@ Release notes for OpenLava versions
            ^
            |
            |
+-- Enlarge the -J option for the job name to be at least 4096 characters.
 -- Added support for binding multiple slots to a core by introducing HOSTS_SHARES
    parameter in lsb.queues for specifying the number of shares the queue is
    allocated for particular host/hostgroup. The share represents the proportion of
@@ -220,7 +221,6 @@ know the exact commit.
 -- Fix the parsing algorithm for compact host name.
 -- Fix a bug in bmgroup where by mistake the -s and -r options were dropped.
 -- Update bmgrop and bugroup man pages.
--- Enlarge the -J name job name to be at leat 1024 characters.
 
 3.2.0
 ======

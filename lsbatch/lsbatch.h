@@ -34,7 +34,7 @@
 #define  MAX_GROUPS          150
 #define  MAX_CHARLEN         20
 #define  MAX_LSB_NAME_LEN    60
-#define  MAX_CMD_DESC_LEN    1024
+#define  MAX_CMD_DESC_LEN    4096
 #define  MAX_JOB_DESC_LEN    4096
 #define  MAX_USER_EQUIVALENT 128
 #define  MAX_RES_LIMITS      256
