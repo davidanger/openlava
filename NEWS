@@ -1,9 +1,7 @@
 Release notes for OpenLava versions
 
-   Toward 4.0 release
-           ^
-           |
-           |
+4.0beta1
+========
 -- Fix a fairshare bug in which jobs were not running under the correct
    user group if bsub -G was specified.
 -- Deleted warning message if mbatchd cannot find lsb.resources file.
