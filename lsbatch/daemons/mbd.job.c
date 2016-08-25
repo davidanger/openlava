@@ -8978,7 +8978,7 @@ ssusp_job(struct jData *jPtr)
               jPtr->jStatus, str_flags(jPtr->jFlags));
 
     if ((jPtr->jStatus & JOB_STAT_USUSP)
-        || (jPtr->jFlags & JFLAG_JOB_PREEMPTED)) {
+        && (jPtr->jFlags & JFLAG_JOB_PREEMPTED)) {
 
         if (resume_job(jPtr) < 0) {
             ls_syslog(LOG_INFO, "\
