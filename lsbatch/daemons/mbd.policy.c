@@ -4915,9 +4915,9 @@ scheduleAndDispatchJobs(void)
         lastSharedResourceUpdateTime = now_disp;
     }
 
-    /* This code in openlava is useless so we
-     * comment it out to speed up performance
-     * and remove it in the next major release.
+    /* We comment this code out because we want to
+     * resume jobs only if there no pending jobs
+     * in higher priority queues.
      */
     if (0) {
         if (!(mSchedStage & M_STAGE_RESUME_SUSP)) {
