@@ -55,7 +55,7 @@ know the exact commit.
 -- Fix res/nios hang blocking ol make.
 -- Create a new parameter NIOS_MAX_TASKS specifying the maximum number
    of tasks nios can handle.
-- Fix/reimplement btop/bbot. Since the job queue management has undergone
+-- Fix/reimplement btop/bbot. Since the job queue management has undergone
    performance improvements these function had to be coded as well.
 -- Fix the mbatchd variable MBD_NO_QSORT_JOBS, which was incorrectly
    set to MBD_QSORT_JOBS in daemons.c
