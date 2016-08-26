@@ -2389,9 +2389,6 @@ jobGone(struct jobCard *jp)
         free_core(jp->numCores, jp->cores, false);
         FREEUP(jp->cores);
         jp->numCores= 0;
-
-        if (jp->jobSpecs.hostShares > 0)
-            free_core_shares(jp->jobSpecs.queue);
     }
 
     if (jp->jobSpecs.actPid == 0 && jp->exitPid == -1) {

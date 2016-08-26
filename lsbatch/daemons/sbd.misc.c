@@ -509,8 +509,10 @@ find_bound_core(pid_t pid, int *num)
 
     i = 0;
     for (cc = 0; cc < num_cores; cc++) {
-        if (CPU_ISSET(cc, &set))
+        if (CPU_ISSET(cc, &set)) {
+            cores[cc].bound++;
             selected_cores[i++] = cc;
+        }
     }
     return selected_cores;
 }
@@ -546,7 +548,7 @@ get_core_shares(char *queue, float shares, int* num)
     ent = h_addEnt_(&coreSharesTab, queue, &new);
     if (!new) {
         shareCores = (struct share_core *) ent->hData;
-        if (deserve == shareCores->num) {
+        if (shares == shareCores->shares) {
             *num = shareCores->num;
             coreSet = calloc(*num, sizeof(int));
             for (i = 0; i < *num; i++) {
@@ -620,16 +622,8 @@ set_core_shares(char *queue, float shares, int num, int *cores)
     }
 
     ent = h_addEnt_(&coreSharesTab, queue, &new);
-    if (!new) {
-        shareCores = (struct share_core *) ent->hData;
-        if (shareCores->shares == shares)
-            return;
-
-        /* host share is changed; remove old entry */
-        FREEUP(shareCores->cores);
-        FREEUP(shareCores->queue);
-        FREEUP(shareCores);
-    }
+    if (!new)
+        return;
 
     shareCores = calloc(1, sizeof(struct share_core));
     shareCores->shares = shares;
@@ -639,27 +633,6 @@ set_core_shares(char *queue, float shares, int num, int *cores)
     for (i = 0; i < shareCores->num; i++)
         shareCores->cores[i] = cores[i];
     ent->hData = shareCores;
-}
-
-void
-free_core_shares(char *queue)
-{
-    struct share_core *share = NULL;
-    hEnt *ent = NULL;
-
-    if (!queue)
-        return;
-
-    ent = h_getEnt_(&coreSharesTab, queue);
-    if (ent) {
-        share = (struct share_core *) ent->hData;
-        if (share) {
-            FREEUP(share->queue);
-            FREEUP(share->cores);
-            FREEUP(share);
-        }
-        h_rmEnt_(&coreSharesTab, ent);
-    }
 }
 
 char *

@@ -50,6 +50,29 @@ Resource type:
 \(bu JOBS
 .RE
 .PP
+The following use cases are supported:
+.RS
+.HP 2
+\(bu If SLOTS or JOBS is configured to be 0, any combination of the consumer types
+can be specified. This enables restricting a subset of the consumers to run jobs.
+.HP 2
+\(bu If SLOTS or JOBS is configured to be non-zero, the following cases are supported:
+.PP
+.RS
+.HP 2
+\(bu Limit the number of slots/jobs each project can use/run from particular queues;
+i.e., PER_PROJECT, QUEUES, and SLOTS or JOBS can be specified in combination.
+.HP 2
+\(bu Limit the number of slots/jobs each user can use/run from particular queues;
+i.e., PER_USER, QUEUES, SLOTS or JOBS can be specified in combination.
+.HP 2
+\(bu Limit the number of slots/jobs on each host from particular queues;
+i.e., PER_HOST, QUEUES, and SLOTS or JOBS can be specified in combination.
+.RE
+.PP
+\(bu Cases outside of these combinations are currently not supported.
+.RE
+.PP
 After making any changes to lsb.resources,
 run \fBbadmin\fR reconfig to reconfigure mbatchd.
 .SH Limit Section Structure
@@ -58,8 +81,8 @@ run \fBbadmin\fR reconfig to reconfigure mbatchd.
 .PP
 Each limit definition begins with the line Begin Limit and ends with
 the line End Limit. A limit section is defined in horizontal format.
-Each row defines one consumer or resource. At least one consumer and
-one resouce must be specified in a limit section.
+Each row defines one consumer or resource. On resource and at least
+one consumer must be specified in a limit section.
 .SH QUEUES or PER_QUEUE
 .BR
 .PP
@@ -83,7 +106,7 @@ a few queues from the limit definition.
 .BR
 .PP
 .PP
-Undefined.
+None. If no limit is specified for PER_QUEUE or QUEUES, no limit is enforced on any queue.
 .SS Example
 .BR
 .PP
@@ -117,7 +140,7 @@ a few users or groups from the limit definition.
 .BR
 .PP
 .PP
-Undefined.
+None. If no limit is specified for PER_USER or USERS, no limit is enforced on any user or user group.
 .SS Example
 .BR
 .PP
@@ -148,7 +171,7 @@ a few hosts from the limit definition.
 .BR
 .PP
 .PP
-Undefined.
+None. If no limit is specified for PER_HOST or HOSTS, no limit is enforced on any host or host group.
 .SS Example
 .BR
 .PP
@@ -173,7 +196,7 @@ Use the not operator (~) to exclude projects from the all specification in the l
 .BR
 .PP
 .PP
-Undefined.
+None. If no limit is specified for PER_PROJECT or PROJECTS, no limit is enforced on any project.
 .SS Example
 .BR
 .PP
@@ -198,7 +221,7 @@ Time window is optional. The limit is enforced only if current time falls within
 .BR
 .PP
 .PP
-Undefined.
+No limit.
 .SS Example
 .BR
 .PP
@@ -221,7 +244,7 @@ Maximum number of running or suspended (RUN, SSUSP, USUSP) jobs available to res
 .BR
 .PP
 .PP
-Undefined.
+No limit.
 .SS Example
 .BR
 .PP

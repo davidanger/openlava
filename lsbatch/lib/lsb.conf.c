@@ -7110,6 +7110,11 @@ static int parseUsers(char* inUsers, char** outUsers)
     int    inTableSize = 0;
     struct passwd *pw = NULL;
 
+    if (uConf->numUsers == 0) {
+        outUsers[0] = strdup("");
+        return 0;
+    }
+
     inTable  = calloc(uConf->numUsers, sizeof(struct inNames*));
     inTableSize = uConf->numUsers;
     outTable = calloc(uConf->numUsers, sizeof(char*));

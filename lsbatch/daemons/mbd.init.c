@@ -720,10 +720,18 @@ static void
 readResConf(int mbdInitFlags)
 {
     char file[PATH_MAX];
+    struct stat st;
 
     if (mbdInitFlags == FIRST_START
         || mbdInitFlags == RECONFIG_CONF) {
         sprintf(file, "%s/lsb.resources", daemonParams[LSB_CONFDIR].paramValue);
+
+        /* lsb.resources is optional */
+        if (stat(file, &st) != 0) {
+            limitConf = my_calloc(1, sizeof (struct resLimitConf), __FUNCTION__);
+            return;
+        }
+
         resFileConf = getFileConf(file, RESOURCE_FILE);
         if (resFileConf == NULL && lserrno == LSE_NO_FILE) {
             ls_syslog(LOG_ERR, "\

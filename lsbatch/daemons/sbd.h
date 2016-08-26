@@ -363,7 +363,6 @@ extern int bind_to_core(pid_t, int, int*);
 extern int *find_bound_core(pid_t, int *);
 extern int* get_core_shares(char *, float, int*);
 extern void set_core_shares(char *, float, int, int *);
-extern void free_core_shares(char *);
 extern char *covert_cores_to_str(int, int *);
 
 #ifdef HAVE_HWLOC_H
