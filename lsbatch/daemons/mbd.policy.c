@@ -7250,7 +7250,7 @@ job_res_match_host(struct hData *hPtr, struct jData *jPtr)
         r2 = match_host_res(hPtr, jPtr->qPtr->resValPtr);
     }
 
-    if (r && r2)
+    if (r || r2)
         return true;
 
     return false;
