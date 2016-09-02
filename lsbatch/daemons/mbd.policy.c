@@ -7644,8 +7644,13 @@ job_res_match_host(struct hData *hPtr, struct jData *jPtr)
         r2 = match_host_res(hPtr, jPtr->qPtr->resValPtr);
     }
 
-    if (r && r2)
+    /* Either the job or the queue are asking
+     * for the dedicated resource.
+     */
+    if (r || r2)
         return true;
+
+    assert(0);
 
     return false;
 }
