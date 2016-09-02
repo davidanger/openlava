@@ -594,7 +594,7 @@ getResMaps(int nRes, char **resource)
                 break;
         if (resNo < allLsInfo->nRes) {
             SET_BIT(resNo, temp);
-            }
+        }
     }
     return (temp);
 
