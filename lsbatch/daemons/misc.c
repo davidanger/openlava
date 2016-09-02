@@ -582,8 +582,8 @@ getResMaps(int nRes, char **resource)
     if (nRes < 0)
         return NULL;
 
-    temp = (int *) my_malloc (GET_INTNUM(allLsInfo->nRes) * sizeof (int),
-                         "getResMaps");
+    temp = my_malloc(GET_INTNUM(allLsInfo->nRes) * sizeof (int),
+                     "getResMaps");
 
     for (i = 0; i < GET_INTNUM(allLsInfo->nRes); i++)
         temp[i] = 0;
@@ -594,10 +594,9 @@ getResMaps(int nRes, char **resource)
                 break;
         if (resNo < allLsInfo->nRes) {
             SET_BIT(resNo, temp);
-            }
+        }
     }
-    return (temp);
-
+    return temp;
 }
 
 

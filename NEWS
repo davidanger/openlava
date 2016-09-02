@@ -3,6 +3,11 @@ Release notes for OpenLava versions
 3.3.3
 ======
 
+-- Implement dedicated host resource feature. In lsf.conf configure
+   MBD_DEDICATED_RESOURCES, jobs that do not specify explicitly the
+   resource in their job/queue resource requirement will not be dispatched
+   on the host having the dedicated resource, those hosts are specified
+   in lsf.cluster file with a ! in front of their name.
 -- Implement bsub -Jd to support specifying job description to jobs.
 -- Implement tech preview of lsb.resources.
 -- Implement the bresource command and the lsb_getlimits() API.

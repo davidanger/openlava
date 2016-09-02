@@ -338,6 +338,8 @@ static void handle_reserve_memory(struct jData *, int);
 static struct jData *jiter_next_job2(LIST_T *);
 static bool_t run_time_ok(struct jData *);
 static bool_t decrease_mem_by_slots(struct jData *);
+static bool_t job_res_match_host(struct hData *, struct jData *);
+static bool_t match_host_res(struct hData *, struct resVal *);
 
 static bool_t lsbPtilePack = FALSE;
 
@@ -1378,6 +1380,7 @@ getJUsable(struct jData *jp, int *numJUsable, int *nProc)
     num = numHosts;
     numHosts = 0;
     for (i = 0; i < num; i++) {
+
         if (checkResLimit(jp, jUsable[i]->host)) {
             if (numHosts != i) {
                 jUsable[numHosts] = jUsable[i];
@@ -1387,7 +1390,9 @@ getJUsable(struct jData *jp, int *numJUsable, int *nProc)
             jUnusable[numReasons] = jUsable[i];
             jReasonTb[numReasons++] = PEND_RES_LIMIT;
             if (logclass & (LC_SCHED | LC_PEND))
-                ls_syslog(LOG_DEBUG2, "%s: Host %s isn't eligible; reason=%d", fname, jUsable[i]->host, jReasonTb[numReasons-1]);
+                ls_syslog(LOG_DEBUG2, "\
+%s: Host %s isn't eligible; reason=%d", fname, jUsable[i]->host,
+                          jReasonTb[numReasons-1]);
         }
     }
 
@@ -1478,7 +1483,9 @@ getJUsable(struct jData *jp, int *numJUsable, int *nProc)
             jUnusable[numReasons] = thrown[i];
             jReasonTb[numReasons++] = PEND_HOST_RES_REQ;
             if (logclass & (LC_SCHED | LC_PEND))
-                ls_syslog(LOG_DEBUG2, "%s: Host %s isn't eligible; reason=%d", fname, thrown[i]->host, jReasonTb[numReasons-1]);
+                ls_syslog(LOG_DEBUG2, "\
+%s: Host %s isn't eligible; reason=%d", fname, thrown[i]->host,
+                          jReasonTb[numReasons-1]);
         }
     }
 
@@ -1492,12 +1499,21 @@ getJUsable(struct jData *jp, int *numJUsable, int *nProc)
                       jUsable[i]->host);
     }
 
+    /* Filter jobs in jUsable[]
+     */
     *numJUsable = 0;
     *nProc = 0;
     for (i = 0; i < numHosts; i++) {
         INC_CNT(PROF_CNT_innerLoopgetJUsable);
         hReason = 0;
         numSlots = 0;
+
+        if (!hReason
+            && daemonParams[MBD_DEDICATED_RESOURCES].paramValue) {
+            if (! job_res_match_host(jUsable[i], jp)) {
+                hReason = PEND_RES_LIMIT;
+            }
+        }
 
         if (!hReason && (jp->shared->jobBill.options & SUB_EXCLUSIVE)
             && jUsable[i]->numJobs >= 1) {
@@ -1572,8 +1588,6 @@ getJUsable(struct jData *jp, int *numJUsable, int *nProc)
             }
         }
 
-
-
         if (!hReason && jp->requeMode == RQE_EXCLUDE) {
             for (j = 0; jp->reqHistory[j].host != NULL; j++)
                 if (jUsable[i] == jp->reqHistory[j].host) {
@@ -1610,28 +1624,31 @@ getJUsable(struct jData *jp, int *numJUsable, int *nProc)
         }
 
         if (hReason) {
+            /* If the pending reason is set for this host
+             * record its unsuability together with the
+             * pending reason itself.
+             */
             jUnusable[numReasons] = jUsable[i];
             jReasonTb[numReasons++] = hReason;
 
-	    ls_syslog(LOG_INFO, "\
-%s: job %s host %s isn't eligible; reason = %d", fname,
-		      lsb_jobid2str(jp->jobId),
-		      jUsable[i]->host,
-		      jReasonTb[numReasons-1]);
-
-            if (logclass & (LC_SCHED | LC_PEND))
-                ls_syslog(LOG_DEBUG2, "%s: Host %s isn't eligible; reason = %d", fname, jUsable[i]->host, jReasonTb[numReasons-1]);
+            if (logclass & (LC_TRACE | LC_SCHED)) {
+                ls_syslog(LOG_INFO, "\
+%s: job %s host %s is not eligible; reason = %d", fname,
+                          lsb_jobid2str(jp->jobId),
+                          jUsable[i]->host,
+                          jReasonTb[numReasons-1]);
+            }
+            /* Continue searching as this host is not a candidate
+             */
             continue;
         }
 
-	ls_syslog(LOG_INFO, "\
-%s: job %s got one eligible host %s; numSlots=%d numAvailSlots=%d", fname,
-		  lsb_jobid2str(jp->jobId), jUsable[i]->host,
-		  numSlots, numAvailSlots);
-
-        if (logclass & (LC_SCHED))
-            ls_syslog(LOG_DEBUG3, "%s: Got one eligible host %s; numSlots=%d numAvailSlots=%d", fname, jUsable[i]->host, numSlots, numAvailSlots);
-
+        if (logclass & (LC_TRACE | LC_SCHED)) {
+            ls_syslog(LOG_INFO, "\
+%s: job %s got one eligible host %s; numSlots %d numAvailSlots %d", fname,
+                      lsb_jobid2str(jp->jobId), jUsable[i]->host,
+                      numSlots, numAvailSlots);
+        }
 
         numAvailSlots = MIN(numAvailSlots, numSlots);
         candHosts[*numJUsable].hData = jUsable[i];
@@ -1653,7 +1670,8 @@ getJUsable(struct jData *jp, int *numJUsable, int *nProc)
         if (mbdParams->max_num_candidates > 0
             && *numJUsable >= mbdParams->max_num_candidates)
             break;
-    }
+
+    } /* for (i = 0; i < numHosts; i++) */
 
 
     if (numReasons) {
@@ -1676,7 +1694,7 @@ getJUsable(struct jData *jp, int *numJUsable, int *nProc)
     }
 
     if (*numJUsable == 0) {
-        if (0 && logclass & LC_SCHED)
+        if (logclass & (LC_SCHED|LC_TRACE))
             ls_syslog(LOG_INFO, "\
 %s: Got no eligible host for job %s; numReasons=%d",
                       fname, lsb_jobid2str(jp->jobId), jp->numReasons);
@@ -7560,9 +7578,108 @@ decrease_mem_by_slots(struct jData *jPtr)
     if ((hasResSpanHosts(jPtr->shared->resValPtr)
          || hasResSpanHosts(jPtr->qPtr->resValPtr))
         && (jPtr->shared->jobBill.numProcessors > 1)
-        && (jPtr->shared->jobBill.numProcessors == jPtr->shared->jobBill.maxNumProcessors)) {
+        && (jPtr->shared->jobBill.numProcessors
+            == jPtr->shared->jobBill.maxNumProcessors)) {
         return true;
     }
 
     return false;
 }
+
+/* job_res_match_host()
+ */
+static bool_t
+job_res_match_host(struct hData *hPtr, struct jData *jPtr)
+{
+    bool_t r;
+    bool_t r2;
+
+    /* No dedicated resources in the system keep filtering
+     * this host.
+     */
+    if (! daemonParams[MBD_DEDICATED_RESOURCES].paramValue)
+        return true;
+
+    /* No dedicated resoures on this host apply next filter
+     * on this candidate host
+     */
+    if (HTAB_NUM_ELEMENTS(hPtr->dres_tab) <= 0)
+        return true;
+
+    if (logclass & LC_TRACE) {
+        ls_syslog(LOG_INFO, "\
+%s: job %s host %s MBD_DEDICATED_RESOURCES %s",
+                  __func__, lsb_jobid2str(jPtr->jobId),
+                  hPtr->host,
+                  daemonParams[MBD_DEDICATED_RESOURCES].paramValue);
+    }
+
+    /* This job/queue is not asking for any resource so a host
+     * with a dedicated resource which must be specified
+     * cannot be its candidate.
+     */
+    if (!jPtr->shared->resValPtr
+        && !jPtr->qPtr->resValPtr) {
+
+        if (logclass & LC_TRACE) {
+            ls_syslog(LOG_INFO, "\
+%s: no job or queue resreq host is not candidate", __func__);
+        }
+
+        return false;
+    }
+
+    if (jPtr->shared->resValPtr
+        && !jPtr->qPtr->resValPtr) {
+        return match_host_res(hPtr, jPtr->shared->resValPtr);
+    }
+
+    if (! jPtr->shared->resValPtr
+        && jPtr->qPtr->resValPtr)
+        return match_host_res(hPtr, jPtr->qPtr->resValPtr);
+
+    if (jPtr->shared->resValPtr
+        && jPtr->qPtr->resValPtr) {
+        r = match_host_res(hPtr, jPtr->shared->resValPtr);
+        r2 = match_host_res(hPtr, jPtr->qPtr->resValPtr);
+    }
+
+    if (r && r2)
+        return true;
+
+    return false;
+}
+
+/* match_host_res()
+ */
+static bool_t
+match_host_res(struct hData *hPtr, struct resVal *r)
+{
+    hEnt *ent;
+    sTab s;
+    char *res;
+
+    ent = h_firstEnt_(hPtr->dres_tab, &s);
+    while (ent) {
+        res = ent->hData;
+        if (strstr(r->selectStr, res)) {
+
+            if (logclass & LC_TRACE) {
+                ls_syslog(LOG_INFO, "\
+%s: host res %s matches requested res %s", __func__, res, r->selectStr);
+            }
+
+            return true;
+        }
+        ent = h_nextEnt_(&s);
+    }
+
+    if (logclass & LC_TRACE) {
+        ls_syslog(LOG_INFO, "\
+%s: job/queue resreq %s no match for host dedicated resources",
+                  __func__, r->selectStr);
+    }
+
+    return false;
+}
+
