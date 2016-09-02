@@ -34,7 +34,6 @@ struct listSet  *voidJobList = NULL;
 void                 freeNewJob(struct jData *);
 extern void          initResVal(struct resVal* );
 extern int           userJobLimitOk (struct jData *, int, int *);
-extern void          reorderSJL(void);
 static int checkSubHost(struct jData *);
 static bool_t  checkUserPriority(struct jData *, int, int *);
 static int           queueOk(char *, struct jData *, int *, struct submitReq *,
@@ -45,7 +44,6 @@ static int           getCpuLimit(struct jData *, struct submitReq *);
 static void          insertAndShift(struct jData *, struct jData *, int, int);
 static int           resigJobs1(struct jData *, int *);
 static sbdReplyType  sigStartedJob(struct jData *, int, time_t, int);
-static void          reorderSJL1(struct jData *);
 static int           matchJobStatus(int, struct jData *);
 static double        acumulateValue(double, double);
 static void          accumulateRU(struct jData *, struct statusReq *);
@@ -930,9 +928,6 @@ selectJobs (struct jobInfoReq *jobInfoReq, struct jData ***jobDataList,
         if (skipJobListByReq (jobInfoReq->options, list)  == TRUE)
             continue;
 
-        if (list == SJL && jDataList[list]->back != jDataList[list])
-            reorderSJL ();
-
         for (jp = jDataList[list]->back;
              (jp!= jDataList[list]); jp = jp->back) {
             int i;
@@ -1094,59 +1089,6 @@ skipJobListByReq (int options, int joblist)
     }
 
     return true;
-
-}
-
-void
-reorderSJL (void)
-{
-    struct jData *tmpSJL, *jp, *next;
-
-
-    tmpSJL = (struct jData *)
-        tmpListHeader ((struct listEntry *) jDataList[SJL]);
-
-
-    for (jp = tmpSJL->back; jp != tmpSJL; jp = next) {
-        next = jp->back;
-        reorderSJL1 (jp);
-    }
-}
-
-static void
-reorderSJL1 (struct jData *job)
-{
-    struct jData *jp;
-    int found = FALSE;
-
-    for (jp = jDataList[SJL]->forw; jp != jDataList[SJL]; jp = jp->forw) {
-        if (!equalHost_(jp->hPtr[0]->host, job->hPtr[0]->host)) {
-            if (found == TRUE)
-                break;
-            continue;
-        }
-        found = TRUE;
-        if (job->qPtr->priority < jp->qPtr->priority)
-            break;
-        else if (job->qPtr->priority == jp->qPtr->priority) {
-            if (job->startTime > jp->startTime)
-                break;
-            else if ((job->startTime == jp->startTime || job->startTime == 0)
-                     && (job->jobId > jp->jobId))
-                break;
-        }
-    }
-
-
-
-    offList((struct listEntry *)job);
-
-    if (found) {
-        inList ((struct listEntry *)jp, (struct listEntry *)job);
-    } else {
-        inList ((struct listEntry *)jDataList[SJL]->forw,
-                (struct listEntry *)job);
-    }
 
 }
 
