@@ -206,7 +206,7 @@ lsb_pendreason(int numReasons, int *rsTb, struct jobInfoHead *jInfoH,
         { PEND_QUE_WINDOW_WILL_CLOSE,
           "Job will not finish before queue's run window is closed"},
         { PEND_RES_LIMIT,
-          "Not allowed due to resource limit"},
+          "Not allowed due to resource limit."},
         /*
          * User Related Reasons (601 - 800)
          */

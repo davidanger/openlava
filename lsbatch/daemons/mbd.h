@@ -126,11 +126,6 @@ extern int maxSchedStay;
 extern int max_job_sched;
 extern int qsort_jobs;
 
-/* Table of dedicated resources as specific
- * in lsf.conf MBD_DEDICATED_RESOURCES
- */
-extern hTab *d_res_tab;
-
 #define DEL_ACTION_KILL      0x01
 #define DEL_ACTION_REQUEUE   0x02
 
@@ -614,7 +609,6 @@ struct hData {
     LIST_T    *pxySJL;
     LIST_T    *pxyRsvJL;
     float     leftRusageMem;
-    hTab *dres_tab; /* host dedicated resources */
 };
 
 

@@ -30,5 +30,3 @@ LSF_AUTH=eauth
 # Batch mail message handling
 LSB_MAILTO=!U
 
-MBD_DEDICATED_RESOURCES="xy zw"
-
