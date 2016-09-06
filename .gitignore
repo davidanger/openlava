@@ -37,7 +37,6 @@ config/openlava.csh
 config/openlava.setup
 config/openlava.sh
 config/lsb.resources
-config/gitcommit
 config.guess
 config.sub
 ltmain.sh
@@ -52,4 +51,3 @@ m4/ltsugar.m4
 m4/ltversion.m4
 m4/lt~obsolete.m4
 stamp-h
-config/gitcommit

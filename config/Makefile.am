@@ -26,5 +26,5 @@ install-data-local:
 
 # Tell automake to install during distcheck the
 # configuration and etc files. 
-etc_DATA = gitcommit
-EXTRA_DIST = $(etc_DATA)
+#etc_DATA = gitcommit
+#EXTRA_DIST = $(etc_DATA)
