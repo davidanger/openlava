@@ -1,0 +1,45 @@
+.ds ]W %
+.ds ]L
+.TH OPENLAVA 8 "OpenLava Version 4.0 - Aug 2016"
+.SH NAME
+openlava \- the OpenLava service manager
+.SH SYNOPSIS
+\fB$LSF_ENVDIR/openlava start | stop | status\fR
+.SH DESCRIPTION
+.PP
+OpenLava is an open source workload job scheduling software
+for a cluster of computers. OpenLava shares the same foundation
+as LSF.
+.PP
+openlava is the OpenLava service and daemon manager.
+It is often installed in the /etc/init.d directory, so that
+all OpenLava daemons can be managed as one Linux service.
+.PP
+When it runs, it sources \fI$OPENLAVA_TOP/etc/limits.sh\fR,
+a bash script, if the file exists. Linux resource limits can
+be set in the file \fI$OPENLAVA_TOP/etc/limits.sh\fR as the
+default resource limits for OpenLava jobs. If the file
+\fI$OPENLAVA_TOP/etc/limits.sh\fR does not exist or if
+certain resource limits are not set in the file,
+OpenLava will use the limits in the shell where sbatchd is
+started as the default limits for jobs.
+.SH OPTIONS
+.TP 5
+.B start
+Start OpenLava daemons.
+.TP 5
+.B stop
+Stop OpenLava daemons.
+.TP 5
+.B status
+Print process IDs for lim, res, sbatchd, and mbatchd (on the master only).
+.SH FILES
+.PD 0
+.TP
+\fB$OPENLAVA_TOP/etc/limits.sh\fR
+.PD
+.SH "SEE ALSO"
+.BR lim(8),
+.BR res(8),
+.BR sbatchd(8),
+.BR mbatchd(8)
