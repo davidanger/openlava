@@ -2,6 +2,7 @@ Release notes for OpenLava versions
 
 4.0beta1
 ========
+-- Fixed sbatchd compile error on RHEL 5 because glibc lacks CPU_COUNT.
 -- Fix a fairshare bug in which jobs were not running under the correct
    user group if bsub -G was specified.
 -- Deleted warning message if mbatchd cannot find lsb.resources file.
