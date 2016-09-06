@@ -2,6 +2,7 @@ Release notes for OpenLava versions
 
 4.0beta1
 ========
+-- Fix the XDR error in the badmin qclose command.
 -- Add man page for $LSF_ENVDIR/openlava
 -- Add a template file $LSF_ENVDIR/limits.sh
 -- Fixed sbatchd compile error on RHEL 5 because glibc lacks CPU_COUNT.

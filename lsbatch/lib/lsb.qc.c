@@ -41,6 +41,7 @@ lsb_queuecontrol (char *queue, int opCode)
             lsberrno = LSBE_NO_MEM;
             return -1;
         }
+        qcReq.message = strdup("");
     }
 
 
@@ -76,9 +77,6 @@ lsb_queuecontrol (char *queue, int opCode)
         }
         strcpy(qcReq.name, queue);
     }
-
-
-
 
     mbdReqtype = BATCH_QUE_CTRL;
     xdrmem_create(&xdrs, request_buf, MSGSIZE, XDR_ENCODE);
