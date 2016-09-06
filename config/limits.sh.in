@@ -1,0 +1,10 @@
+# This is the script that the OpenLava service manager /etc/init.d/openlava
+# runs before starting sbatchd. All limits set here will be the 
+# default limits for jobs.
+#
+# The limits should be set by bash command ulimit
+#
+# no of files/descriptors
+#ulimit -n 300000
+# no of processes
+#ulimit -u 600000
