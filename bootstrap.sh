@@ -12,7 +12,3 @@ if [ ! -d ".git" ]; then
   /bin/echo "No .git directory, no commit file"
   exit 0
 fi
-
-# git command better be in your path
-git rev-parse HEAD > config/gitcommit 
-cat config/gitcommit

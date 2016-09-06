@@ -163,7 +163,7 @@ AC_CONFIG_FILES([
 	config/openlava          \
 	config/openlava.setup    \
 	config/openlava.sh       \
-        config/limis.sh
+        config/limits.sh
 	examples/Makefile        \
 	examples/docker/Makefile \
 	tests/Makefile],,
