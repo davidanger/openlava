@@ -1,5 +1,10 @@
 Release notes for OpenLava versions
 
+Master
+=======
+
+-- Main branch is master.
+
 4.0beta1
 ========
 -- Fix the XDR error in the badmin qclose command.
