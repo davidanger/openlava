@@ -1603,6 +1603,8 @@ xdr_groupInfoEnt(XDR *xdrs, struct groupInfoEnt *gInfo,
 
 }
 
+/* xdr_controlReq()
+ */
 bool_t
 xdr_controlReq(XDR *xdrs, struct controlReq *controlReq,
                struct LSFHeader *hdr)
@@ -1613,10 +1615,10 @@ xdr_controlReq(XDR *xdrs, struct controlReq *controlReq,
 
     if (xdrs->x_op == XDR_DECODE) {
         if (first == true) {
-            sp = (char *) malloc (MAXHOSTNAMELEN);
+            sp = calloc(MAXHOSTNAMELEN, sizeof(char));
             if (sp == NULL)
                 return false;
-            message = (char *) malloc(MAXLINELEN);
+            message = calloc(MAXLINELEN, sizeof(char));
             if (message == NULL)
                 return false;
             first = false;
@@ -1629,10 +1631,18 @@ xdr_controlReq(XDR *xdrs, struct controlReq *controlReq,
         sp = controlReq->name;
         message = controlReq->message;
     }
-    if (!(xdr_int(xdrs, &controlReq->opCode) &&
-          xdr_string(xdrs, &sp, MAXHOSTNAMELEN) &&
-          xdr_string(xdrs, &message, MAXLINELEN)))
-        return false;
+
+    if (xdrs->x_op == XDR_DECODE
+        && hdr->version >= 40) {
+        if (! xdr_int(xdrs, &controlReq->opCode)
+            || ! xdr_string(xdrs, &sp, MAXHOSTNAMELEN)
+            || ! xdr_string(xdrs, &message, MAXLINELEN))
+            return false;
+    } else {
+        if (! xdr_int(xdrs, &controlReq->opCode)
+            || ! xdr_string(xdrs, &sp, MAXHOSTNAMELEN))
+            return false;
+    }
 
     return true;
 }
