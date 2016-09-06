@@ -13,7 +13,7 @@ include $(top_srcdir)/common.mk
 etcdir = $(prefix)/etc
 noinst_DATA = openlava.sh openlava.csh \
 	lsf.conf lsf.cluster.${openlavacluster} lsf.shared lsf.task \
-	lsb.hosts lsb.params lsb.queues lsb.users lsb.resources
+	lsb.hosts lsb.params lsb.queues lsb.users lsb.resources limits.sh
 
 etc_SCRIPTS = openlava
 
