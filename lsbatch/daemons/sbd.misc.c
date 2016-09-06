@@ -505,9 +505,11 @@ find_bound_core(pid_t pid, int *num)
     }
 
     *num = 0;
-    for (i = 0; i < CPU_SETSIZE; i++)
+    for (i = 0; i < CPU_SETSIZE; i++) {
         if (CPU_ISSET(i, &set))
             (*num)++;
+    }
+
     selected_cores = calloc(*num, sizeof(int));
 
     i = 0;
