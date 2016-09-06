@@ -2,6 +2,8 @@ Release notes for OpenLava versions
 
 4.0beta1
 ========
+-- Add man page for $LSF_ENVDIR/openlava
+-- Add a template file $LSF_ENVDIR/limits.sh
 -- Fixed sbatchd compile error on RHEL 5 because glibc lacks CPU_COUNT.
 -- Fix a fairshare bug in which jobs were not running under the correct
    user group if bsub -G was specified.
@@ -35,8 +37,6 @@ Release notes for OpenLava versions
 -- In the bootstrap.sh file create the revision number file
    which is going to be installed in the etc directory.
 -- Create lsid 4.0dev4 output.
--- Add man page for $LSF_ENVDIR/openlava
--- Add a template file $LSF_ENVDIR/limits.sh
 
 4.0pre3
 =======
