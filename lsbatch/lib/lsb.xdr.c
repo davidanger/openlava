@@ -1632,16 +1632,33 @@ xdr_controlReq(XDR *xdrs, struct controlReq *controlReq,
         message = controlReq->message;
     }
 
-    if (xdrs->x_op == XDR_DECODE
-        && hdr->version >= 40) {
+    /* This is 4.0 encoding so always encode the message
+     * string.
+     */
+    if (xdrs->x_op == XDR_ENCODE) {
         if (! xdr_int(xdrs, &controlReq->opCode)
             || ! xdr_string(xdrs, &sp, MAXHOSTNAMELEN)
             || ! xdr_string(xdrs, &message, MAXLINELEN))
             return false;
-    } else {
-        if (! xdr_int(xdrs, &controlReq->opCode)
-            || ! xdr_string(xdrs, &sp, MAXHOSTNAMELEN))
-            return false;
+        return true;
+    }
+
+    if (xdrs->x_op == XDR_DECODE) {
+
+        if (hdr->version >= 40) {
+            if (! xdr_int(xdrs, &controlReq->opCode)
+                || ! xdr_string(xdrs, &sp, MAXHOSTNAMELEN)
+                || ! xdr_string(xdrs, &message, MAXLINELEN))
+                return false;
+            return true;
+        } else {
+            /* Decoding lower versions without the
+             * message string.
+             */
+            if (! xdr_int(xdrs, &controlReq->opCode)
+                || ! xdr_string(xdrs, &sp, MAXHOSTNAMELEN))
+                return false;
+        }
     }
 
     return true;
