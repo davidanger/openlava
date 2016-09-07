@@ -2,6 +2,7 @@ Release notes for OpenLava versions
 
 4.0beta1
 ========
+-- Fix a typo in lsb.queues.in, preemption was spelled with double t.
 -- Fix compatibility probelms when replaying older lsb.events.
 -- Fix the XDR error in the badmin qclose command.
 -- Add man page for $LSF_ENVDIR/openlava
