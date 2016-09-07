@@ -887,13 +887,13 @@ readJobNew(char *line, struct jobNewLog *jobNewLog)
         return LSBE_EVENT_FORMAT;
     line += ccount + 1;
 
-    if (version >= OPENLAVA_XDR_VERSION) {
+    if (version >= 30) {
         saveQStr(line, jobNewLog->userGroup);
     } else {
         jobNewLog->userGroup = strdup("");
     }
 
-    if (version >= OPENLAVA_XDR_VERSION) {
+    if (version >= 32) {
         cc = sscanf(line, "%d%n", &jobNewLog->abs_run_limit, &ccount);
         if (cc != 1)
             return LSBE_EVENT_FORMAT;
@@ -902,7 +902,7 @@ readJobNew(char *line, struct jobNewLog *jobNewLog)
         jobNewLog->abs_run_limit = -1;
     }
 
-    if (version >= OPENLAVA_XDR_VERSION) {
+    if (version >= 33) {
         saveQStr(line, jobNewLog->job_group);
     } else {
         jobNewLog->job_group = strdup("");
@@ -914,7 +914,7 @@ readJobNew(char *line, struct jobNewLog *jobNewLog)
         jobNewLog->job_description = strdup("");
     }
 
-    if (version >= OPENLAVA_XDR_VERSION) {
+    if (version >= 40) {
         cc = sscanf(line, "%ld%n", &jobNewLog->priority, &ccount);
         if (cc != 1)
             return LSBE_EVENT_FORMAT;
@@ -1143,7 +1143,7 @@ readJobStart(char *line, struct jobStartLog *jobStartLog)
     if (cc != 1)
         return LSBE_EVENT_FORMAT;
 
-    if (version >= OPENLAVA_XDR_VERSION) {
+    if (version >= 30) {
         saveQStr(line, jobStartLog->userGroup);
     } else {
         jobStartLog->userGroup = strdup("");
@@ -1171,7 +1171,7 @@ readJobStartAccept(char *line, struct jobStartAcceptLog *jobStartAcceptLog)
         return LSBE_EVENT_FORMAT;
     line += ccount + 1;
 
-    if (version >= 32) {
+    if (version >= 33) {
         cc = sscanf(line, "%d%n", &(jobStartAcceptLog->jflags), &ccount);
         if (cc != 1)
             return LSBE_EVENT_FORMAT;
@@ -2768,13 +2768,26 @@ readNewJgrp(char *line, struct jgrpLog *jgrp)
     copyQStr(&line, MAXLSFNAMELEN, 0, jgrp->name);
     copyQStr(&line, PATH_MAX, 0, jgrp->path);
     copyQStr(&line, MAXLSFNAMELEN, 0, jgrp->user);
+    /* By default there is no job group limit.
+     */
+    jgrp->max_jobs = INT32_MAX;
 
     cc = sscanf(line, "\
-%d %d %d %d %n", &jgrp->uid, &jgrp->status,
-                (int *)&jgrp->submit_time, &jgrp->max_jobs, &n);
-    if (cc != 4)
+%d %d %d %n", &jgrp->uid, &jgrp->status, (int *)&jgrp->submit_time, &n);
+    if (cc != 3)
         return LSBE_EVENT_FORMAT;
     line = line + n;
+
+    /* This incompatibility was introduced in the middle
+     * of the released branch so instead of the version
+     * number we check if there are more bytes on the line.
+     */
+    if (line[0] != 0) {
+        cc = sscanf(line, "%d%n", &jgrp->max_jobs, &n);
+        if (cc != 1)
+            return LSBE_EVENT_FORMAT;
+        line = line + n;
+    }
 
     return LSBE_NO_ERROR;
 }
