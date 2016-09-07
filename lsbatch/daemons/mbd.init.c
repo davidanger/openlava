@@ -4290,6 +4290,7 @@ check_ownership(struct qData *qPtr)
     }
 
     return true;
+}
 
 /* add_host_dedicated_res()
  */

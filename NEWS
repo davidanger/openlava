@@ -1,8 +1,10 @@
 Release notes for OpenLava versions
 
-<<<<<<< HEAD
 4.0beta1
 ========
+-- Implement MBD_DEDICATED_RESOURCES in lsf.conf. These are host based boolean
+   resources that must be defined in lsf.cluster file. A job must explicitly
+   specify a dedicated resource to get allocated the host with that resource.
 -- Fix a typo in lsb.queues.in, preemption was spelled with double t.
 -- Fix compatibility probelms when replaying older lsb.events.
 -- Fix the XDR error in the badmin qclose command.
