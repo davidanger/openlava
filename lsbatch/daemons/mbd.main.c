@@ -199,6 +199,8 @@ static void decay_run_time(void);
 static int requeue_job(struct jData *);
 
 static struct chanData *chans;
+hTab *d_res_tab;
+static void make_dedicated_resources_table(void);
 
 int
 main(int argc, char **argv)
@@ -341,6 +343,10 @@ mbd:%s: MBD_MAX_JOBS_SCHED %d", __func__, max_job_sched);
         qsort_jobs = 0;
         ls_syslog(LOG_WARNING, "\
 %s: mbatchd qsort() of jobs is disabled", __func__);
+    }
+
+    if (daemonParams[MBD_DEDICATED_RESOURCES].paramValue) {
+        make_dedicated_resources_table();
     }
 
     daemon_doinit();
@@ -1544,4 +1550,35 @@ decay:
     }
 
     last_decay = time(NULL);
+}
+
+
+/* make_dedicated_resources_table()
+ */
+void
+make_dedicated_resources_table(void)
+{
+    char *p;
+    char *p0;
+    char *word;
+    hEnt *ent;
+
+    if (! daemonParams[MBD_DEDICATED_RESOURCES].paramValue)
+        return;
+
+    d_res_tab = calloc(1, sizeof(hTab));
+    h_initTab_(d_res_tab, 11);
+
+    p = p0 = strdup(daemonParams[MBD_DEDICATED_RESOURCES].paramValue);
+
+    while ((word = getNextWord_(&p))) {
+        if (logclass & LC_TRACE) {
+            ls_syslog(LOG_INFO, "\
+%s: resource %s is in a dedicated set", __func__, word);
+        }
+        ent = h_addEnt_(d_res_tab, strdup(word), NULL);
+        ent->hData = strdup(word);
+    }
+
+    _free_(p0);
 }

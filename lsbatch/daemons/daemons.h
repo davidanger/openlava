@@ -158,6 +158,7 @@
 #define MBD_NO_QSORT_JOBS      58
 #define LIM_ACCEPT_FLOAT_CLIENT 59
 #define MBD_SWITCH_NOFORK       60  /* for dev only */
+#define MBD_DEDICATED_RESOURCES 61
 
 #define NOT_LOG  INFINIT_INT
 

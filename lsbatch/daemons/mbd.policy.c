@@ -339,6 +339,8 @@ static struct jData *jiter_next_job2(LIST_T *);
 static bool_t run_time_ok(struct jData *);
 static bool_t decrease_mem_by_slots(struct jData *);
 static bool_t higher_queue_has_pend_jobs(struct qData *);
+static bool_t job_res_match_host(struct hData *, struct jData *);
+static bool_t match_host_res(struct hData *, struct resVal *);
 
 static bool_t lsbPtilePack = FALSE;
 
@@ -1500,6 +1502,13 @@ getJUsable(struct jData *jp, int *numJUsable, int *nProc)
         hReason = 0;
         numSlots = 0;
 
+        if (!hReason
+            && daemonParams[MBD_DEDICATED_RESOURCES].paramValue) {
+            if (! job_res_match_host(jUsable[i], jp)) {
+                hReason = PEND_HOST_RES_REQ;
+            }
+        }
+
         if (!hReason && (jp->shared->jobBill.options & SUB_EXCLUSIVE)
             && jUsable[i]->numJobs >= 1) {
             hReason = PEND_HOST_NONEXCLUSIVE;
@@ -1631,8 +1640,9 @@ getJUsable(struct jData *jp, int *numJUsable, int *nProc)
 		  numSlots, numAvailSlots);
 
         if (logclass & (LC_SCHED))
-            ls_syslog(LOG_DEBUG3, "%s: Got one eligible host %s; numSlots=%d numAvailSlots=%d", fname, jUsable[i]->host, numSlots, numAvailSlots);
-
+            ls_syslog(LOG_INFO, "\
+%s: Got one eligible host %s; numSlots=%d numAvailSlots=%d",
+                      fname, jUsable[i]->host, numSlots, numAvailSlots);
 
         numAvailSlots = MIN(numAvailSlots, numSlots);
         candHosts[*numJUsable].hData = jUsable[i];
@@ -1656,7 +1666,6 @@ getJUsable(struct jData *jp, int *numJUsable, int *nProc)
             break;
     }
 
-
     if (numReasons) {
         int *reasonTb = my_calloc(numReasons + jp->numReasons,
                                   sizeof(int), fname);
@@ -1672,12 +1681,16 @@ getJUsable(struct jData *jp, int *numJUsable, int *nProc)
         }
         jp->numReasons += numReasons;
         FREEUP(jp->reasonTb);
+        /* Here we copy the reasons why some hosts
+         * cannot be used by this job. Each job will
+         * has its own reason table.
+         */
         jp->reasonTb = reasonTb;
 
     }
 
     if (*numJUsable == 0) {
-        if (0 && logclass & LC_SCHED)
+        if (logclass & (LC_SCHED | LC_TRACE))
             ls_syslog(LOG_INFO, "\
 %s: Got no eligible host for job %s; numReasons=%d",
                       fname, lsb_jobid2str(jp->jobId), jp->numReasons);
@@ -7744,3 +7757,105 @@ decrease_mem_by_slots(struct jData *jPtr)
 
     return false;
 }
+
+/* job_res_match_host()
+ */
+static bool_t
+job_res_match_host(struct hData *hPtr, struct jData *jPtr)
+{
+    bool_t r;
+    bool_t r2;
+
+    /* No dedicated resources in the system keep filtering
+     * this host.
+     */
+    if (! daemonParams[MBD_DEDICATED_RESOURCES].paramValue)
+        return true;
+
+    /* No dedicated resoures on this host apply next filter
+     * on this candidate host
+     */
+    if (HTAB_NUM_ELEMENTS(hPtr->dres_tab) <= 0)
+        return true;
+
+    if (logclass & LC_TRACE) {
+        ls_syslog(LOG_INFO, "\
+%s: job %s host %s queue %s MBD_DEDICATED_RESOURCES %s",
+                  __func__, lsb_jobid2str(jPtr->jobId),
+                  hPtr->host, jPtr->qPtr->queue,
+                  daemonParams[MBD_DEDICATED_RESOURCES].paramValue);
+    }
+
+    /* This job/queue is not asking for any resource so a host
+     * with a dedicated resource which must be specified
+     * cannot be its candidate.
+     */
+    if (!jPtr->shared->resValPtr
+        && !jPtr->qPtr->resValPtr) {
+
+        if (logclass & LC_TRACE) {
+            ls_syslog(LOG_INFO, "\
+%s: no job or queue resreq host is not candidate", __func__);
+        }
+
+        return false;
+    }
+
+    if (jPtr->shared->resValPtr
+        && !jPtr->qPtr->resValPtr) {
+        return match_host_res(hPtr, jPtr->shared->resValPtr);
+    }
+
+    if (! jPtr->shared->resValPtr
+        && jPtr->qPtr->resValPtr)
+        return match_host_res(hPtr, jPtr->qPtr->resValPtr);
+
+    if (jPtr->shared->resValPtr
+        && jPtr->qPtr->resValPtr) {
+        r = match_host_res(hPtr, jPtr->shared->resValPtr);
+        r2 = match_host_res(hPtr, jPtr->qPtr->resValPtr);
+    }
+
+    if (r || r2)
+        return true;
+
+    return false;
+}
+
+/* match_host_res()
+ */
+static bool_t
+match_host_res(struct hData *hPtr, struct resVal *r)
+{
+    hEnt *ent;
+    sTab s;
+    char *res;
+
+    ent = h_firstEnt_(hPtr->dres_tab, &s);
+    while (ent) {
+        /* Search if job/queue resVal is requesting
+         * the resource that is dedicated on the host
+         * hPtr.
+         */
+        res = ent->hData;
+        if (strstr(r->selectStr, res)) {
+
+            if (logclass & LC_TRACE) {
+                ls_syslog(LOG_INFO, "\
+%s: host %s res %s matches job/queue requested res %s", __func__, hPtr->host,
+                          res, r->selectStr);
+            }
+
+            return true;
+        }
+        ent = h_nextEnt_(&s);
+    }
+
+    if (logclass & LC_TRACE) {
+        ls_syslog(LOG_INFO, "\
+%s: job/queue resreq %s does not match host %s dedicated resources",
+                  __func__, r->selectStr, hPtr->host);
+     }
+     return false;
+ }
+

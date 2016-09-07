@@ -1,5 +1,6 @@
 Release notes for OpenLava versions
 
+<<<<<<< HEAD
 4.0beta1
 ========
 -- Fix a typo in lsb.queues.in, preemption was spelled with double t.

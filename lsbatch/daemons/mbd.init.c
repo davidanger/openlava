@@ -156,6 +156,7 @@ static bool_t is_ownplugin_ok(void);
 static int parse_host_shares(const char *, struct qData *qp);
 static void make_hsacct(struct hData *, char *, int);
 static bool_t check_ownership(struct qData *);
+static void add_host_dedicated_res(struct hData *, struct hostInfo *);
 
 int
 minit(int mbdInitFlags)
@@ -480,6 +481,8 @@ initHData(struct hData *hData)
     hData->pxyRsvJL = NULL;
     hData->leftRusageMem = INFINIT_LOAD;
     hData->affinity = FALSE;
+    hData->dres_tab = calloc(1, sizeof(hTab));
+    h_initTab_(hData->dres_tab, 11);
 
     return hData;
 }
@@ -844,6 +847,7 @@ addHost(struct hostInfo *lsf,
         hPtr->maxTmp    = lsf->maxTmp;
         hPtr->nDisks    = lsf->nDisks;
         hPtr->resBitMaps  = getResMaps(lsf->nRes, lsf->resources);
+        add_host_dedicated_res(hPtr, lsf);
 
         /* Fill up the hostent structure that is not used
          * anywhere anyway...
@@ -4286,4 +4290,33 @@ check_ownership(struct qData *qPtr)
     }
 
     return true;
+
+/* add_host_dedicated_res()
+ */
+static void
+add_host_dedicated_res(struct hData *hPtr, struct hostInfo *lsf)
+{
+    int cc;
+    hEnt *ent;
+
+    if (! daemonParams[MBD_DEDICATED_RESOURCES].paramValue)
+        return;
+
+    for (cc = 0; cc < lsf->nRes; cc++) {
+        /* This resource giving us from openlava base
+         * for this host, is also configured as dedicated
+         * resources in lsf.conf. Remember if in this host.
+         */
+        if (! (ent = h_getEnt_(d_res_tab, lsf->resources[cc])))
+            continue;
+
+        if (logclass & LC_TRACE) {
+            ls_syslog(LOG_INFO, "\
+%s: resource %s is dedicated on host %s", __func__, lsf->resources[cc],
+                      hPtr->host);
+        }
+
+        ent = h_addEnt_(hPtr->dres_tab, strdup(lsf->resources[cc]), NULL);
+        ent->hData = strdup(lsf->resources[cc]);
+    }
 }
