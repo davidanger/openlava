@@ -147,6 +147,7 @@ static void inPendJobList2(struct jData *,
 static int jcompare(const void *, const void *);
 
 static struct hData *handle_float_client(struct submitReq *);
+static bool_t should_resume_by_job(struct jData *);
 
 int
 newJob(struct submitReq *subReq, struct submitMbdReply *Reply, int chan,
@@ -1887,6 +1888,8 @@ jobStatusSignal(sbdReplyType reply, struct jData *jData, int sigValue,
             }
             else if (!(jData->jStatus & JOB_STAT_USUSP)) {
                 jData->newReason |= (SUSP_USER_STOP | SUSP_MBD_LOCK);
+                ls_syslog(LOG_INFO, "\
+%s: job %s set SUSP_MBD_LOCK", __func__, lsb_jobid2str(jData->jobId));
                 jStatusChange(jData, JOB_STAT_USUSP, LOG_IT, fname);
             }
             jData->jStatus &= ~JOB_STAT_SIGNAL;
@@ -3169,6 +3172,10 @@ jStatusChange(struct jData *jData,
     if (MASK_STATUS (newStatus & ~JOB_STAT_UNKWN)
         == MASK_STATUS (oldStatus & ~JOB_STAT_UNKWN))
         return;
+
+    ls_syslog(LOG_INFO, "\
+%s: job %s oldStatus 0x%x newStatus 0x%x", __func__, lsb_jobid2str(jData->jobId),
+              jData->jStatus, newStatus);
 
     newStatus = MASK_STATUS(newStatus);
     if (eventTime == LOG_IT && (jData->jStatus & JOB_STAT_RESERVE))
@@ -4666,7 +4673,6 @@ initJData(struct jShared  *shared)
     job->sigValue = SIG_NULL;
     job->port = 0;
 
-
     if (pjobSpoolDir != NULL) {
         job->jobSpoolDir = safeSave(pjobSpoolDir);
     } else {
@@ -4685,6 +4691,7 @@ initJData(struct jShared  *shared)
     job->inEligibleGroups = NULL;
     job->run_rusage = NULL;
     job->abs_run_limit = -1;
+    job->preempted_hosts = make_link();
 
     return job;
 }
@@ -7357,13 +7364,11 @@ tryResume(struct qData *qPtr)
         if (0 && jp->hPtr[0]->flags & HOST_JOB_RESUME)
             continue;
 
-        if (logclass & LC_SCHED) {
-            ls_syslog(LOG_INFO, "\
-%s: job %s jStatus %x reason %x subreason %d actPid %d>",
+        ls_syslog(LOG_INFO, "\
+%s: job %s jStatus %x reason %x subreason %d actPid %d",
                       fname, lsb_jobid2str(jp->jobId),
                       jp->jStatus, jp->newReason,
                       jp->subreasons, jp->actPid);
-        }
 
         if (!(jp->jStatus & JOB_STAT_SSUSP)
             || !(jp->newReason & SUSP_MBD_LOCK)
@@ -7390,11 +7395,12 @@ tryResume(struct qData *qPtr)
         /* There is a queue in which we try to resume
          */
         if (qPtr != NULL
-            && jp->qPtr != qPtr)
+            && jp->qPtr != qPtr) {
             continue;
+        }
 
         if (jp->jStatus & JOB_STAT_RESERVE) {
-            updResCounters (jp, jp->jStatus & ~JOB_STAT_RESERVE);
+            updResCounters(jp, jp->jStatus & ~JOB_STAT_RESERVE);
             jp->jStatus &= ~JOB_STAT_RESERVE;
         }
         resumeSig = 0;
@@ -7423,8 +7429,10 @@ tryResume(struct qData *qPtr)
 %s: job %s is being resumed flags %s", __func__, lsb_jobid2str(jp->jobId),
                           str_flags(jp->jFlags));
 
-                if (jp->jFlags & JFLAG_JOB_PREEMPTED)
-                    jp->jFlags &= ~JFLAG_JOB_PREEMPTED;
+                if (jp->jFlags & JFLAG_RES_PREEMPTED)
+                    jp->jFlags &= ~JFLAG_RES_PREEMPTED;
+                if (jp->jFlags & JFLAG_SLOT_PREEMPTED)
+                    jp->jFlags &= ~JFLAG_SLOT_PREEMPTED;
 
                 adjLsbLoad (jp, true, true);
                 if (logclass & (LC_EXEC))
@@ -7446,8 +7454,12 @@ shouldResume (struct jData *jp, int *resumeSig)
     static char fname[] = "shouldResume";
     int saveReason, saveSubReasons, returnCode = RESUME_JOB;
 
-    if (logclass & (LC_EXEC))
-        ls_syslog(LOG_DEBUG3, "%s: job=%s; jStatus=%x; reasons=%x, subreason=%d, numHosts=%d", fname, lsb_jobid2str(jp->jobId), jp->jStatus, jp->newReason, jp->subreasons, jp->numHostPtr);
+    if (logclass & (LC_EXEC));
+
+    ls_syslog(LOG_INFO, "\
+%s: job %s jStatus 0x%x reasons 0x%x subreason %d numHosts %d", __func__,
+              lsb_jobid2str(jp->jobId), jp->jStatus,
+              jp->newReason, jp->subreasons, jp->numHostPtr);
 
     if (   jp->jFlags & JFLAG_URGENT_NOSTOP
            && *resumeSig == SIG_RESUME_USER) {
@@ -7459,8 +7471,6 @@ shouldResume (struct jData *jp, int *resumeSig)
 
     saveReason = jp->newReason;
     saveSubReasons = jp->subreasons;
-
-
 
     if ((IS_SUSP(jp->jStatus)) && (jp->newReason & SUSP_RES_LIMIT) &&
         !(jp->subreasons & SUB_REASON_RUNLIMIT) ) {
@@ -7553,10 +7563,38 @@ shouldResume (struct jData *jp, int *resumeSig)
         } else {
             if (*resumeSig == 0 && (jp->newReason & SUSP_RES_RESERVE))
                 *resumeSig = SIG_RESUME_OTHER;
+            ls_syslog(LOG_INFO, "\
+%s: job %s jStatus 0x%x reasons 0x%x SIG_RESUME_OTHER", __func__,
+                      lsb_jobid2str(jp->jobId), jp->jStatus, jp->newReason);
             if (jp->newReason & ~(SUSP_RES_RESERVE | SUSP_MBD_LOCK))
                 jp->newReason &= ~SUSP_RES_RESERVE;
         }
     }
+
+    if (jp->jFlags & JFLAG_SLOT_PREEMPTED) {
+        bool_t b;
+
+        b = should_resume_by_job(jp);
+        if (b != true) {
+            if (logclass & LC_PREEMPT) {
+                ls_syslog(LOG_INFO, "\
+%s: job %s cannot resume jflags %s reason SUSP_MBD_PREEMPT", __func__,
+                          str_flags(jp->jFlags),
+                          lsb_jobid2str(jp->jobId));
+            }
+            jp->newReason |= SUSP_MBD_PREEMPT;
+            return CANNOT_RESUME;
+        }
+
+        ls_syslog(LOG_INFO, "\
+%s: job %s can resume jflags %s", __func__, lsb_jobid2str(jp->jobId),
+                  str_flags(jp->jFlags),
+
+        *resumeSig = SIG_RESUME_OTHER;
+        jp->newReason &= ~SUSP_MBD_PREEMPT;
+        return RESUME_JOB;
+    }
+
     return returnCode;
 }
 
@@ -7666,7 +7704,8 @@ shouldResumeByRes (struct jData *jp)
         return RESUME_JOB;
     }
 
-
+    /* Save all load values on hosts where the job is executed on.
+     */
     loads = (float **) my_malloc (jp->numHostPtr * sizeof (float *), fname);
     for (i = 0; i < jp->numHostPtr; i++) {
         loads [i] = (float *) my_malloc
@@ -7679,6 +7718,8 @@ shouldResumeByRes (struct jData *jp)
                 atof (jp->hPtr[i]->instances[j]->value);
     }
 
+    /* Call adjLsbLoad() to adjust load for these hosts
+     */
     adjLsbLoad (jp, true, true);
 
 
@@ -7711,6 +7752,8 @@ shouldResumeByRes (struct jData *jp)
     } ENDFORALL_PRMPT_RSRCS;
 
 
+    /* Check if loads on these hosts are less than zero.
+     */
     for (i = 0; i < jp->numHostPtr && returnCode != CANNOT_RESUME; i++) {
         for (j = 0; j < allLsInfo->numIndx; j++) {
             if (jp->hPtr[i]->lsbLoad[j] < 0.0
@@ -7734,6 +7777,8 @@ shouldResumeByRes (struct jData *jp)
         }
     }
 
+    /* Restore the original load values on these hosts.
+     */
     for (i = 0; i < jp->numHostPtr; i++) {
         char loadString[MAXLSFNAMELEN];
         for (j = 0; j < allLsInfo->numIndx; j++)
@@ -7749,6 +7794,23 @@ shouldResumeByRes (struct jData *jp)
 
     return returnCode;
 
+}
+
+/* should_resume_by_job()
+ */
+static bool_t
+should_resume_by_job(struct jData *jPtr)
+{
+    struct jData *jPtr2;
+
+    jPtr2 = getJobData(jPtr->jobid_preempted_me);
+    if (jPtr2 == NULL)
+        return true;
+
+    if (IS_FINISH(jPtr2->jStatus))
+        return true;
+
+    return false;
 }
 
 static void
@@ -8977,14 +9039,20 @@ ssusp_job(struct jData *jPtr)
 %s: jobID %s state 0x%x flags %s", __func__, lsb_jobid2str(jPtr->jobId),
               jPtr->jStatus, str_flags(jPtr->jFlags));
 
-    if ((jPtr->jStatus & JOB_STAT_USUSP)
-        && (jPtr->jFlags & JFLAG_JOB_PREEMPTED)) {
+    if (jPtr->jStatus & JOB_STAT_USUSP) {
 
-        if (resume_job(jPtr) < 0) {
-            ls_syslog(LOG_INFO, "\
+        /* A job has been preemted for resources
+         * or slots.
+         */
+        if ((jPtr->jFlags & JFLAG_RES_PREEMPTED)
+            || (jPtr->jFlags & JFLAG_SLOT_PREEMPTED)) {
+
+            if (resume_job(jPtr) < 0) {
+                ls_syslog(LOG_INFO, "\
 %s: failed in resuming job %s jflags %s", __func__,
-                      lsb_jobid2str(jPtr->jobId),
-                      str_flags(jPtr->jFlags));
+                          lsb_jobid2str(jPtr->jobId),
+                          str_flags(jPtr->jFlags));
+            }
         }
     }
 }
@@ -9021,9 +9089,11 @@ resume_job(struct jData *jPtr)
         return -1;
     }
 
-    ls_syslog(LOG_INFO, "\
-%s: jobid %s bresumed after being stopped jFlags %s",
+    if (logclass & LC_PREEMPT) {
+        ls_syslog(LOG_INFO, "\
+%s: jobid %s after being stopped jFlags %s next state must be JOB_STAT_SSUSP",
               __func__, lsb_jobid2str(jPtr->jobId), str_flags(jPtr->jFlags));
+    }
 
     /* Do not clean the  JFLAG_PREEMPT_GLB or JFLAG_JOB_PREEMPTED
      * as get_job_tokens() will use them to ask for more tokens

@@ -36,7 +36,10 @@ prm_init(LIST_T *qList)
     return 0;
 }
 
-/* Elect jobs to be preempted
+/* prm_elect_preempt()
+ *
+ * Elect jobs to be preempted based on jobs that can trigger
+ * preemption.
  */
 int
 prm_elect_preempt(struct qData *qPtr, link_t *rl, int numjobs)
@@ -49,8 +52,8 @@ prm_elect_preempt(struct qData *qPtr, link_t *rl, int numjobs)
     linkiter_t iter;
 
     if (logclass & LC_PREEMPT)
-        ls_syslog(LOG_INFO, "%s: entering queue %s",
-                  __func__, qPtr->queue);
+        ls_syslog(LOG_INFO, "\
+%s: entering preemptive queue %s", __func__, qPtr->queue);
 
     /* Jobs that can eventually trigger
      * preemption causing other jobs to
@@ -129,7 +132,8 @@ prm_elect_preempt(struct qData *qPtr, link_t *rl, int numjobs)
         return 0;
     }
 
-    /* Traverse candidate list
+    /* Traverse candidate list of jobs in the
+     * preemptive queue and search for preemptable jobs.
      */
     while ((jPtr = pop_link(jl))) {
         struct qData *qPtr2;
@@ -163,6 +167,7 @@ prm_elect_preempt(struct qData *qPtr, link_t *rl, int numjobs)
             for (jPtr2 = jDataList[SJL]->forw;
                  jPtr2 != jDataList[SJL];
                  jPtr2 = jPtr2->forw) {
+                int cc;
 
                 if (jPtr2->qPtr != qPtr2)
                     continue;
@@ -181,7 +186,17 @@ prm_elect_preempt(struct qData *qPtr, link_t *rl, int numjobs)
 %s: job %s gives up %d slots got %d want %d", __func__,
                               lsb_jobid2str(jPtr2->jobId),
                               jPtr2->shared->jobBill.numProcessors,
+
                               num, numSLOTS);
+
+                jPtr2->jobid_preempted_me = jPtr->jobId;
+
+                for (cc = 0; cc < jPtr2->numHostPtr; cc++) {
+                    ls_syslog(LOG_INFO, "\
+%s: job %s exec hosts %s", __func__, lsb_jobid2str(jPtr->jobId),
+                             jPtr2->hPtr[cc]->host);
+                    push_link(jPtr->preempted_hosts, jPtr2->hPtr[cc]);
+                }
 
                 if (num >= numSLOTS)
                     goto pryc;

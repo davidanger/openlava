@@ -92,16 +92,15 @@ typedef enum {
 #define JFLAG_DEPCOND_REJECT    0x8000
 #define JFLAG_SEND_SIG          0x10000
 #define JFLAG_BTOP              0x20000
-#define JFLAG_ADM_BTOP          0x40000
+#define JFLAG_SLOT_PREEMPTED    0x40000  /* MBD preempted for slots */
 #define JFLAG_READY1            0x100000
 #define JFLAG_READY2            0x200000
 #define JFLAG_URGENT            0x400000
 #define JFLAG_URGENT_NOSTOP     0x800000
 #define JFLAG_REQUEUE           0x1000000
 #define JFLAG_HAS_BEEN_REQUEUED 0x2000000
-#define JFLAG_JOB_PREEMPTED     0x20000000
+#define JFLAG_RES_PREEMPTED     0x20000000 /* MBD preempted for resources */
 #define JFLAG_BORROWED_SLOTS    0x40000000
-#define JFLAG_JOB_PREEMPTED     0x20000000
 
 /* this does not fit an int
  * 0x80000000 = 2147483648
@@ -366,6 +365,8 @@ struct jData {
     struct lsbMsg **msgs;
     char *run_rusage;   /* "rusage[x=1:y=2||z=3:w=4]" */
     int abs_run_limit; /* absolute run limit in seconds */
+    link_t *preempted_hosts;
+    LS_LONG_INT jobid_preempted_me;
 };
 
 
@@ -1580,5 +1581,6 @@ extern int do_resLimitInfo(XDR *, int, struct sockaddr_in *, struct LSFHeader *)
 extern int stop_job(struct jData *, int);
 extern char *str_flags(int);
 extern void tryResume(struct qData *);
+extern inline bool_t has_preemption(void);
 
 #endif /* _MBD_HEADER_ */

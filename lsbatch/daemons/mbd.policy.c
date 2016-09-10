@@ -339,6 +339,7 @@ static struct jData *jiter_next_job2(LIST_T *);
 static bool_t run_time_ok(struct jData *);
 static bool_t decrease_mem_by_slots(struct jData *);
 static bool_t higher_queue_has_pend_jobs(struct qData *);
+static int get_preempted_slots(struct jData *, struct hData *);
 
 static bool_t lsbPtilePack = FALSE;
 
@@ -489,7 +490,7 @@ readyToDisp (struct jData *jpbw, int *numAvailSlots)
         }
         jReason = PEND_QUE_WINDOW_WILL_CLOSE;
     } else if (now_disp < jpbw->shared->jobBill.beginTime) {
-        if (jpbw->jFlags & JFLAG_JOB_PREEMPTED)
+        if (jpbw->jFlags & (JFLAG_RES_PREEMPTED | JFLAG_SLOT_PREEMPTED))
             jReason = PEND_JOB_PREEMPTED;
         else
             jReason = PEND_JOB_START_TIME;
@@ -580,7 +581,8 @@ readyToDisp (struct jData *jpbw, int *numAvailSlots)
     }
 
     jpbw->newReason = 0;
-    jpbw->jFlags &= ~JFLAG_JOB_PREEMPTED;
+    jpbw->jFlags &= ~JFLAG_SLOT_PREEMPTED;
+    jpbw->jFlags &= ~JFLAG_RES_PREEMPTED;
 
     if (logclass & (LC_PEND))
         ls_syslog(LOG_DEBUG3, "\
@@ -1030,7 +1032,10 @@ getLsbUsable(void)
             hReason = PEND_HOST_LOCKED;
         else if (LS_ISLOCKEDM(hPtr->limStatus))
             hReason = PEND_HOST_LOCKED_MASTER;
-        else if (hPtr->numJobs >= hPtr->maxJobs) {
+        else if (0 && hPtr->numJobs >= hPtr->maxJobs) {
+            /* Disable this in case preemption is defined.
+             * We will check this later on in getHostJobSlots1()
+             */
             hPtr->hStatus |= HOST_STAT_FULL;
             hReason = PEND_HOST_JOB_LIMIT;
         }
@@ -1038,6 +1043,10 @@ getLsbUsable(void)
         if (!hReason
             && overThreshold(hPtr->lsbLoad, hPtr->loadSched, &ldReason))
             hReason = ldReason;
+
+        if (hReason == PEND_HOST_JOB_LIMIT
+            && has_preemption())
+            hReason = 0;
 
         if (hReason) {
             hReasonTb[1][i] = hReason;
@@ -2507,8 +2516,8 @@ getHostJobSlots (struct jData *jp, struct hData *hp, int *numAvailSlots,
 }
 
 static int
-getHostJobSlots1 (int numNeeded, struct jData *jp, struct hData *hp,
-                  int *numAvailSlots, int noHULimits)
+getHostJobSlots1(int numNeeded, struct jData *jp, struct hData *hp,
+                 int *numAvailSlots, int noHULimits)
 {
     static char fname[] = "getHostJobSlots1";
     struct qData *qp = jp->qPtr;
@@ -2522,7 +2531,6 @@ getHostJobSlots1 (int numNeeded, struct jData *jp, struct hData *hp,
 
     INC_CNT(PROF_CNT_getHostJobSlots1);
 
-
     if (hp->maxJobs == INFINIT_INT) {
         numSlots = INFINIT_INT;
         *numAvailSlots = INFINIT_INT;
@@ -2532,26 +2540,47 @@ getHostJobSlots1 (int numNeeded, struct jData *jp, struct hData *hp,
 
             int numUnUsedSlots = MAX(0, hp->maxJobs - hp->numJobs);
 
+
             *numAvailSlots = MIN(hp->maxJobs - hp->numRUN - hp->numRESERVE,
                                  hAcct->numAvailSUSP + numUnUsedSlots);
 
             *numAvailSlots = MAX(0, *numAvailSlots);
             numSlots = *numAvailSlots;
+
+            ls_syslog(LOG_INFO, "\
+%s: job %s hAcct %s numslots %d", __func__,
+                      lsb_jobid2str(jp->jobId), hp->host, numSlots);
+
         } else {
             numSlots = hp->maxJobs - hp->numJobs;
             *numAvailSlots = numSlots;
+            ls_syslog(LOG_INFO, "\
+%s: job %s host %s numslots %d", __func__,
+                      lsb_jobid2str(jp->jobId), hp->host, numSlots);
         }
 
         *numAvailSlots = MAX(0, *numAvailSlots);
         numSlots = MAX(0, numSlots);
 
+
         if (numNeeded > numSlots) {
-            jp->newReason = PEND_HOST_JOB_LIMIT;
-            if (logclass & (LC_JLIMIT))
-                ls_syslog(LOG_DEBUG2, "%s: rs=%d job=%s host=%s maxJobs=%d numJobs=%d", fname, jp->newReason, lsb_jobid2str(jp->jobId), hp->host, hp->maxJobs, hp->numJobs);
-            *numAvailSlots = 0;
-            return 0;
+
+            if (LINK_NUM_ENTRIES(jp->preempted_hosts) > 0) {
+
+                numSlots= *numAvailSlots = get_preempted_slots(jp, hp);
+
+            } else {
+
+                jp->newReason = PEND_HOST_JOB_LIMIT;
+                if (logclass & (LC_JLIMIT))
+                    ls_syslog(LOG_DEBUG2, "\
+%s: rs=%d job=%s host=%s maxJobs=%d numJobs=%d", fname, jp->newReason,
+                          lsb_jobid2str(jp->jobId), hp->host, hp->maxJobs, hp->numJobs);
+                *numAvailSlots = 0;
+                return 0;
+            }
         }
+
         if (jp->numCandPtr == 1
             && *numAvailSlots < jp->shared->jobBill.numProcessors) {
             if (hReasonTb[1][hp->hostId] == 0) {
@@ -2560,18 +2589,15 @@ getHostJobSlots1 (int numNeeded, struct jData *jp, struct hData *hp,
         }
     }
 
-
     if (noHULimits)
         return (numSlots);
 
-
     numSlots1 = ckPerHULimits(qp, hp, up, &numAvailSlots1, &jp->newReason);
-
 
     numSlots = MIN(numSlots, numSlots1);
     *numAvailSlots = MIN(*numAvailSlots, numAvailSlots1);
-    return (numSlots);
 
+    return numSlots;
 }
 
 int
@@ -7738,9 +7764,34 @@ decrease_mem_by_slots(struct jData *jPtr)
     if ((hasResSpanHosts(jPtr->shared->resValPtr)
          || hasResSpanHosts(jPtr->qPtr->resValPtr))
         && (jPtr->shared->jobBill.numProcessors > 1)
-        && (jPtr->shared->jobBill.numProcessors == jPtr->shared->jobBill.maxNumProcessors)) {
+        && (jPtr->shared->jobBill.numProcessors
+            == jPtr->shared->jobBill.maxNumProcessors)) {
         return true;
     }
 
     return false;
+}
+
+static int
+get_preempted_slots(struct jData *jPtr, struct hData *hPtr)
+{
+    linkiter_t iter;
+    struct hData *hPtr2;
+    int num_slots;
+
+    num_slots = 0;
+    traverse_init(jPtr->preempted_hosts, &iter);
+    while ((hPtr2 = traverse_link(&iter))) {
+
+        if (hPtr2 == hPtr) {
+            ++num_slots;
+            if (logclass & LC_PREEMPT) {
+                ls_syslog(LOG_INFO, "\
+%s: job %s host %s num_slots %d", __func__, lsb_jobid2str(jPtr->jobId),
+                          hPtr->host, num_slots);
+            }
+        }
+    }
+
+    return num_slots;
 }

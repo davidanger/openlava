@@ -196,7 +196,6 @@ extern int do_setJobAttr(XDR *, int, struct sockaddr_in *, char *,
                          struct LSFHeader *, struct lsfAuth *);
 static void preempt(void);
 static void decay_run_time(void);
-static int requeue_job(struct jData *);
 
 static struct chanData *chans;
 
@@ -1417,10 +1416,14 @@ preempt(void)
         }
 
         while ((jPtr = pop_link(rl))) {
+
+            ls_syslog(LOG_INFO, "\
+%s: preempting jobd %s JFLAG_SLOT_PREEMPT", __func__, lsb_jobid2str(jPtr->jobId));
+
             if (mbdParams->preemptableResources)
-                stop_job(jPtr, JFLAG_JOB_PREEMPTED);
+                stop_job(jPtr, JFLAG_RES_PREEMPTED);
             else
-                requeue_job(jPtr);
+                stop_job(jPtr, JFLAG_SLOT_PREEMPTED);
         }
 
         fin_link(rl);
@@ -1429,6 +1432,9 @@ preempt(void)
     if (logclass & LC_PREEMPT)
         ls_syslog(LOG_INFO, "%s: leaving ...", __func__);
 }
+
+#if 0
+static int requeue_job(struct jData *);
 
 static int
 requeue_job(struct jData *jPtr)
@@ -1468,6 +1474,7 @@ requeue_job(struct jData *jPtr)
 
     return 0;
 }
+#endif
 
 char *
 str_flags(int flag)
@@ -1500,10 +1507,12 @@ str_flags(int flag)
         sprintf(buf + strlen(buf), "JFLAG_REQUEUE ");
     if (flag & JFLAG_HAS_BEEN_REQUEUED)
         sprintf(buf + strlen(buf), "JFLAG_HAS_BEEN_REQUEUED ");
-    if (flag & JFLAG_JOB_PREEMPTED)
-        sprintf(buf + strlen(buf), "JFLAG_JOB_PREEMPTED ");
+    if (flag & JFLAG_SLOT_PREEMPTED)
+        sprintf(buf + strlen(buf), "JFLAG_SLOT_PREEMPTED ");
     if (flag & JFLAG_BORROWED_SLOTS)
         sprintf(buf + strlen(buf), "JFLAG_BORROWED_SLOTS ");
+    if (flag & JFLAG_RES_PREEMPTED)
+        sprintf(buf + strlen(buf), "JFLAG_RES_PREEMPTED");
     if (flag & JFLAG_WAIT_SWITCH)
         sprintf(buf + strlen(buf), "JFLAG_BORROWED_SLOTS ");
 

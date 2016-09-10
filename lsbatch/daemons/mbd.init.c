@@ -156,6 +156,7 @@ static bool_t is_ownplugin_ok(void);
 static int parse_host_shares(const char *, struct qData *qp);
 static void make_hsacct(struct hData *, char *, int);
 static bool_t check_ownership(struct qData *);
+static bool_t has_preemption_;
 
 int
 minit(int mbdInitFlags)
@@ -4034,6 +4035,7 @@ init_preemption_scheduler(void)
 {
     struct qData *qPtr;
 
+    has_preemption_ = false;
     if (! is_preemptplugin_ok())
         return -1;
 
@@ -4044,10 +4046,25 @@ init_preemption_scheduler(void)
         if (! (qPtr->qAttrib & Q_ATTRIB_PREEMPTIVE))
             continue;
 
-        load_preempt_plugin(qPtr);
+        if (load_preempt_plugin(qPtr) < 0) {
+            ls_syslog(LOG_ERR, "\
+%s: load_preemption_plugin() failed, no preemption in the system",
+                      __func__);
+        }
+        has_preemption_ = true;
     }
 
     return 0;
+}
+
+/* has_preemption()
+ *
+ * Do we have preemption defined in the scheduler.
+ */
+bool_t
+has_preemption(void)
+{
+    return has_preemption_;
 }
 
 /* load_preempt_plugin()

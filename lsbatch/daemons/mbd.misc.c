@@ -1248,13 +1248,13 @@ updHostData(char updHPart, struct jData *jData, int numJobs, int numRUN,
         if (logclass & LC_JLIMIT)
             ls_syslog(LOG_DEBUG3, "%s: job=%s host=%s RUN=%d SSUSP=%d USUSP=%d RESERVE=%d", __func__, lsb_jobid2str(jData->jobId), hp->host, hp->numRUN, hp->numSSUSP, hp->numUSUSP, hp->numRESERVE);
 
-
         if (hp->numJobs >= hp->maxJobs) {
 
             hp->hStatus |= HOST_STAT_FULL;
             hReasonTb[1][hp->hostId] = PEND_HOST_JOB_LIMIT;
-            if (logclass & (LC_PEND | LC_JLIMIT)) {
-                ls_syslog(LOG_DEBUG2, "\
+
+            if (logclass & (LC_PEND | LC_JLIMIT | LC_PREEMPT)) {
+                ls_syslog(LOG_INFO, "\
 %s: Set reason <%d> job=%s host=%s numJobs=%d maxJobs=%d",
                           __func__, hReasonTb[1][hp->hostId],
                           lsb_jobid2str(jData->jobId), hp->host,
@@ -1266,9 +1266,9 @@ updHostData(char updHPart, struct jData *jData, int numJobs, int numRUN,
 
             hp->hStatus &= ~HOST_STAT_FULL;
 
-            if ((logclass & (LC_PEND | LC_JLIMIT))
+            if ((logclass & (LC_PEND | LC_JLIMIT | LC_PREEMPT))
                 && hReasonTb[1][hp->hostId] == PEND_HOST_JOB_LIMIT) {
-                ls_syslog(LOG_DEBUG2, "\
+                ls_syslog(LOG_INFO, "\
 %s: Clear reason <%d>; job=%s host=%s numJobs=%d maxJobs=%d",
                           __func__, hReasonTb[1][hp->hostId],
                           lsb_jobid2str(jData->jobId), hp->host,
