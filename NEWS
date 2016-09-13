@@ -2,6 +2,8 @@ Release notes for OpenLava versions
 
 4.0beta1
 ========
+-- Added bjobs -o to support custom output fields
+-- Added bjobs -cwd to specify the job current working directory
 -- Implement MBD_DEDICATED_RESOURCES in lsf.conf. These are host based boolean
    resources that must be defined in lsf.cluster file. A job must explicitly
    specify a dedicated resource to get allocated the host with that resource.

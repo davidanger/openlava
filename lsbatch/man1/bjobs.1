@@ -9,7 +9,7 @@
 .BR
 .PP
 .PP
-\fBbjobs\fR [\fB-a\fR] [\fB-A\fR] [\fB-w\fR | \fB-l\fR | \fB-UF\fR] [\fB-WL\fR | \fB-WP\fR | \fB-WF\fR]
+\fBbjobs\fR [\fB-a\fR] [\fB-A\fR] [\fB-w\fR | \fB-l\fR | \fB-o\fR "format" | \fB-UF\fR] [\fB-WL\fR | \fB-WP\fR | \fB-WF\fR]
 [\fB-J\fR \fIjob_name\fR]
 [\fB-m\fR \fIhost_name\fR | \fB-m\fR \fIhost_group\fR] 
 [\fB-N\fR \fIhost_name | \fR\fB-N\fR \fIhost_model | \fR\fB-N \fR\fICPU_factor\fR] [\fB-P\fR\fI project_name\fR]
@@ -175,13 +175,257 @@ including job array job limit (%\fIjob_limit\fR) if set.
 .TP
 \fB-noheader\fR
 .IP
-When specified, the bjobs displays the values of the fields without
+When specified, bjobs displays the values of the fields without
 displaying the names of the fields. This is useful for script parsing,
 when column headings are not necessary.
 .IP
 This option applies to output for the bjobs command with no options,
 and to output for all bjobs options with short form output except for
 -l, -UF, -N, -h, and -V.
+
+.TP
+\fB-o "\fIfield_name\fR ... [\fBdelimiter='\fIcharacter\fR']"
+.IP
+Sets the customized output format.
+.IP
+Specifies which bjobs fields (or aliases instead of the full field
+names), in which order to display. The output width of each field
+is unlimited.
+.IP
+Use \fIdelimiter=\fR to set the delimiting character to display
+between different headers and fields. This must be a single charater.
+By default, the delimiter is a space.
+.IP
+To specify special delimiter characters in a csh environment (for
+example, $), use double quotation marks (") in the
+delimiter specification and single quotation marks (') in
+the -o statement:
+.IP
+bjobs ... -o '\fIfield_name\fR ... [delimiter="\fIcharacter\fR"]'
+.IP
+The -o option does not work with bjobs options of -l, -UF, -WF, -W, -WL, -WP.
+.IP
+If a field has no value, the output is a dash (-).
+.IP
+The following are the field names used to specify the bjobs fields
+to display, aliases you can use instead of the field names, and units
+of measurement for the displayed field:
+.IP
+.br
++--------------------+----------------+------+----------------+
+.br
+| Field name         | Aliases        | Unit | Category       |
+.br
++--------------------+----------------+------+----------------+
+.br
+| jobid              | id             |      | Common         |
+.br
+|--------------------|----------------|------|                |
+.br
+| stat               |                |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| user               |                |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| user_group         | ugroup         |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| queue              |                |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| job_name           | name           |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| job_description    | description    |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| proj_name          | proj, project  |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| job_group          | group          |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| dependency         |                |      |                |
+.br
++--------------------+----------------+------+----------------+
+.br
+| command            | cmd            |      | Command        |
+.br
+|--------------------|----------------|------|                |
+.br
+| pre_exec_command   | pre_cmd        |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| pids               |                |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| exit_code          |                |      |                |
+.br
++--------------------+----------------+------+----------------+
+.br
+| from_host          |                |      | Host           |
+.br
+|--------------------|----------------|------|                |
+.br
+| first_host         |                |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| exec_host          |                |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| nexec_host         |                |      |                |
+.br
++--------------------+----------------+------+----------------+
+.br
+| submit_time        |                |      | Time           |
+.br
+|--------------------|----------------|------|                |
+.br
+| start_time         |                |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| estimated_start_ti | estart_time    |      |                |
+.br
+| me                 |                |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| specified_start_ti | sstart_time    |      |                |
+.br
+| me                 |                |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| specified_terminat | sterminate_ti  |      |                |
+.br
+| e_time             | me             |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| time_left          |                | seco |                |
+.br
+|                    |                | nds  |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| finish_time        |                |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| %complete          |                |      |                |
+.br
++--------------------+----------------+------+----------------+
+.br
+| cpu_used           |                |      | CPU            |
+.br
+|--------------------|----------------|------|                |
+.br
+| run_time           |                | sec. |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| idle_factor        |                |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| slots              |                |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| mem                |                | KB   |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| memlimit           |                | KB   |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| swap               |                | KB   |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| swaplimit          |                | KB   |                |
+.br
++--------------------+----------------+------+----------------+
+.br
+| min_req_proc       |                |      | Resource       |
+.br
+|--------------------|----------------|------| requirement    |
+.br
+| max_req_proc       |                |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| resreq             | eresreq, effec |      |                |
+.br
+|                    | tive_resreq    |      |                |
+.br
++--------------------+----------------+------|----------------+
+.br
+| filelimit          |                |      | Resource       |
+.br
+|--------------------|----------------|------| limits         |
+.br
+| corelimit          |                |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| stacklimit         |                |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| processlimit       |                |      |                |
+.br
++--------------------+----------------+------+----------------+
+.br
+| input_file         |                |      | File           |
+.br
+|--------------------|----------------|------|                |
+.br
+| output_file        |                |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| error_file         |                |      |                |
+.br
++--------------------+----------------+------+----------------+
+.br
+| sub_cwd            |                |      | Directory      |
+.br
+|--------------------|----------------|------|                |
+.br
+| exec_home          |                |      |                |
+.br
+|--------------------|----------------|------|                |
+.br
+| exec_cwd           |                |      |                |
+.br
++--------------------+----------------+------+----------------+
+.br
+.IP
+Field names and aliases are not case sensitive.
+.IP
+For example,
+.br
+bjobs -o "id stat name start_time delimiter='^'"
+.br
+JOBID^STAT^JOB_NAME^START_TIME
+.br
+2730^RUN^my_testjob^Sep  8 11:59
 .TP
 \fB-UF
 \fR
