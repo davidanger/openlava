@@ -50,7 +50,7 @@ main(int argc, char **argv)
     }
 
     slots = 0;
-    while ((cc = getopt(argc, argv, "Vhrs")) != EOF) {
+    while ((cc = getopt(argc, argv, "Vhrsw")) != EOF) {
         switch (cc) {
 	    case 'r':
 		options |= GRP_RECURSIVE;
@@ -62,6 +62,8 @@ main(int argc, char **argv)
 	    case 's':
 		++slots;
 		break;
+            case 'w':
+                break;
 	    case 'h':
 	    default:
 		usage(argv[0]);

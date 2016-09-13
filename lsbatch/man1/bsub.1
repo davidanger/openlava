@@ -6,7 +6,7 @@
 .SH NAME
 \fBbsub\fR - submits a batch job to openlava
 .SH SYNOPSIS
-\fBbsub \fR[\fIoptions\fR] \fIcommand \fR[\fIarguments\fR]
+\fBbsub \fR[Ioptions\fR] \fIcommand \fR[\fIarguments\fR]
 .br
 \fBbsub \fR[\fB-h\fR | \fB-V\fR]
 .SH OPTION LIST
@@ -24,63 +24,65 @@
 .br
 \fB-a\fR \fIesub_parameters\fR
 .br
-\fB-b \fR[[\fImonth\fR\fB:\fR]\fIday\fR\fB:\fR]\fIhour\fR\fB:\fRminute
+\fB-b \fR[[\fImonth\fR\fB:\fR]\fIday\fR\fB:\fR]\fIhour\fR\fB:\fR\fIminute\fR
 .br
 \fB-C\fR \fIcore_limit\fR
 .br
-\fB-c\fR [\fIhours\fR\fB:\fR]\fIminutes\fR[\fB/\fRhost_name | \fB/\fRhost_model]
+\fB-c\fR [\fIhours\fR\fB:\fR]\fIminutes\fR[\fB/\fR\fIhost_name\fR | \fB/\fR\fIhost_model\fR]
 .br
-\fB-D\fR data_limit
+\fB-cwd\fR \fIjob_working_directory\fR
 .br
-\fB-e \fRerr_file
+\fB-D\fR \fIdata_limit\fR
 .br
-\fB-E "\fRpre_exec_command [\fIargument \fR...]\fB"\fR
+\fB-e \fR\fIerr_file\fR
 .br
-\fB-f \fR \fB"\fRlocal_file op [\fIremote_file\fR]\fB" \fR...
+\fB-E "\fR\fIpre_exec_command\fR [\fIargument \fR...]\fB"\fR
 .br
-\fB-F \fRfile_limit
+\fB-f \fR \fB"\fR\fIlocal_file\fR op [\fIremote_file\fR]\fB" \fR...
 .br
-\fB-G \fRuser_group
+\fB-F \fR\fIfile_limit\fR
+.br
+\fB-G \fR\fIuser_group\fR
 .br
 \fB-i \fR\fIinput_file\fR | \fB-is\fR \fIinput_file\fR
 .br
 \fB-g \fR\fIjob_group_name\fR
 .br
-\fB-J\fR \fIjob_name | \fR\fB-J\fR  \fB"\fRjob_name\fB[\fRindex_list\fB]%\fRjob_limit\fB"\fR
+\fB-J\fR \fIjob_name\fR | \fB-J\fR  \fB"\fR\fIjob_name\fR\fB[\fR\fIindex_list\fR\fB]%\fR\fIjob_limit\fR\fB"\fR
 .br
 \fB-Jd "\fR\fIjob_description\fR"
 .br
-\fB-k "\fRcheckpoint_dir [\fIcheckpoint_period\fR] [\fBmethod=\fRmethod_name]\fB"\fR
+\fB-k "\fR\fIcheckpoint_dir\fR [\fIcheckpoint_period\fR] [\fBmethod=\fR\fImethod_name\fR]\fB"\fR
 .br
-\fB-L\fR login_shell
+\fB-L\fR \fIlogin_shell\fR
 .br
-\fB-m\fR \fB"\fRhost_name[\fB+\fR[\fIpref_level\fR]] | \fIhost_group\fR[\fB+\fR[\fIpref_level\fR]] ...\fB"\fR
+\fB-m\fR \fB"\fR\fIhost_name\fR[\fB+\fR[\fIpref_level\fR]] | \fIhost_group\fR[\fB+\fR[\fIpref_level\fR]] ...\fB"\fR
 .br
 \fB-M\fR \fImem_limit\fR
 .br
-\fB-n \fRmin_processors[\fB,\fRmax_processors]
+\fB-n \fR\fImin_processors\fR[,\fImax_processors\fR]
 .br
-\fB-o\fR out_file
+\fB-o\fR \fIout_file\fR
 .br
-\fB-P\fR project_name
+\fB-P\fR \fIproject_name\fR
 .br
-\fB-q\fR \fB"\fRqueue_name ...\fB"\fR
+\fB-q\fR \fB"\fR\fIqueue_name\fR ...\fB"\fR
 .br
-\fB-R\fR \fB"\fRres_req\fB"\fR [\fB-R\fR \fB"\fRres_req\fB"\fR ...]
+\fB-R\fR \fB"\fR\fIres_req\fR\fB"\fR [\fB-R\fR \fB"\fR\fIres_req\fR\fB"\fR ...]
 .br
 -\fBsp\fR \fIpriority\fR
 .br
-\fB-S \fRstack_limit
+\fB-S \fR\fIstack_limit\fR
 .br
-\fB-t \fR[[\fImonth\fR\fB:\fR]\fIday\fR\fB:\fR]\fIhour\fR\fB:\fRminute
+\fB-t \fR[[\fImonth\fR\fB:\fR]\fIday\fR\fB:\fR]\fIhour\fR\fB:\fR\fIminute\fR
 .br
 \fB-u\fR \fImail_user\fR
 .br
 \fB-v\fR \fIswap_limit\fR
 .br
-\fB-w\fR \fB'\fRdependency_expression\fB'\fR
+\fB-w\fR \fB'\fR\fIdependency_expression\fR\fB'\fR
 .br
-\fB-W \fR[\fIhours\fR\fB:\fR]\fIminutes\fR[\fB/\fRhost_name | \fB/\fRhost_model]
+\fB-W \fR[\fIhours\fR\fB:\fR]\fIminutes\fR[\fB/\fR\fIhost_name\fR | \fB/\fR\fIhost_model\fR]
 .br
 \fB-Zs\fR
 .SH DESCRIPTION
@@ -400,6 +402,15 @@ execution host is the specified time multiplied by the CPU factor of the
 normalization host then divided by the CPU factor of the execution
 host.
 
+.TP
+\fB-cwd \fRjob_working_directory
+
+.IP
+Sepecifies the current working directory for job execution. If the
+option is not specified, OpenLava will use the current working directory
+where bsub is run for job execution. If the specified current working
+directory cannot be accessed by the user on the job execution host,
+/tmp will be used as the current working directory.
 
 .TP
 \fB-D \fRdata_limit
