@@ -429,6 +429,7 @@ do_Param(struct lsConf *conf, char *fname, int *lineNum)
         {"HIST_MINUTES", NULL, 0},          /* 40 */
         {"ABS_RUNLIMIT", NULL, 0},          /* 41 */
         {"PREEMPTABLE_RESOURCES", NULL, 0}, /* 42 */
+        {"PREEMPT_SLOT_SUSPEND", NULL, 0},      /* 43 */
         {NULL, NULL, 0}
     };
 
@@ -663,6 +664,10 @@ do_Param(struct lsConf *conf, char *fname, int *lineNum)
             } else if (i == 42) {
                 if (keylist[i].val)
                     pConf->param->preemptableResources = strdup(keylist[i].val);
+            } else if (i == 43) {
+                pConf->param->preempt_slot_suspend = false;
+                if (strcasecmp(keylist[i].val, "y") == 0)
+                    pConf->param->preempt_slot_suspend = true;
             } else if (i > 5) {
                 if (i < 23)
                     value = my_atoi(keylist[i].val, INFINIT_INT, 0);
@@ -870,6 +875,7 @@ initParameterInfo(struct parameterInfo *param)
     param->disable_peer_jobs = 0;
     param->hist_mins = -1;
     param->run_abs_limit = false;
+    param->preempt_slot_suspend = false;
 }
 
 static void

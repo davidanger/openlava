@@ -170,6 +170,8 @@
 #define    EVENT_NEW_JGRP         31
 #define    EVENT_DEL_JGRP         32
 #define    EVENT_MOD_JGRP         33
+#define    EVENT_JOB_PREEMPTING   34
+#define    EVENT_JOB_PREEMPTED    35
 
 /* Job specific reasons
  */
@@ -901,6 +903,7 @@ struct parameterInfo {
     int hist_mins;
     int run_abs_limit; /* if specificied -W is not scaled */
     char *preemptableResources; /* resource based queue preemption */
+    bool_t preempt_slot_suspend;
 };
 
 
@@ -1374,6 +1377,25 @@ struct jgrpModLog {
     int max_jobs;
 };
 
+/* Log the hosts a job is going to preempt
+ */
+struct jobPreemptingLog {
+    int jobid;
+    int idx;
+    int numHosts;
+    char **hosts;
+};
+
+/* Log the jobid and index of a job
+ * that preempted jobid
+ */
+struct jobPreemptedLog {
+    int jobid;
+    int idx;
+    int preempted_by;
+    int preempted_by_idx;
+};
+
 union  eventLog {
     struct jobNewLog jobNewLog;
     struct jobStartLog jobStartLog;
@@ -1406,6 +1428,8 @@ union  eventLog {
     struct endStream eos;
     struct jgrpLog jgrpLog;
     struct jgrpModLog jgrpMod;
+    struct jobPreemptingLog jobPreempting;
+    struct jobPreemptedLog jobPreempted;
 };
 
 

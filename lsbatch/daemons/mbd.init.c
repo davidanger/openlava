@@ -156,7 +156,7 @@ static bool_t is_ownplugin_ok(void);
 static int parse_host_shares(const char *, struct qData *qp);
 static void make_hsacct(struct hData *, char *, int);
 static bool_t check_ownership(struct qData *);
-static bool_t has_preemption_;
+static bool_t has_slot_preemption_;
 
 int
 minit(int mbdInitFlags)
@@ -1999,6 +1999,8 @@ setParams(struct paramConf *paramConf)
      */
     mbdParams = calloc(1, sizeof(struct parameterInfo));
 
+    /* Copy the library values to the mbd data strcutures
+     */
     memcpy(mbdParams, params, sizeof(struct parameterInfo));
     if (params->defaultQueues)
         mbdParams->defaultQueues = strdup(params->defaultQueues);
@@ -2023,7 +2025,6 @@ setParams(struct paramConf *paramConf)
      */
     if (params->preemptableResources)
         mbdParams->preemptableResources = strdup(params->preemptableResources);
-
 }
 
 static void
@@ -4034,8 +4035,10 @@ static int
 init_preemption_scheduler(void)
 {
     struct qData *qPtr;
+    bool_t has_preemption = false;
 
-    has_preemption_ = false;
+    has_slot_preemption_ = false;
+
     if (! is_preemptplugin_ok())
         return -1;
 
@@ -4051,20 +4054,35 @@ init_preemption_scheduler(void)
 %s: load_preemption_plugin() failed, no preemption in the system",
                       __func__);
         }
-        has_preemption_ = true;
+        has_preemption = true;
+    }
+
+    if (has_preemption
+        && mbdParams->preemptableResources) {
+        has_slot_preemption_ = false;
+        ls_syslog(LOG_INFO, "\
+%s: system has preemption, preemtable reesources %s, no slot preemption",
+                 __func__, mbdParams->preemptableResources);
+    }
+
+    if (has_preemption
+        && mbdParams->preemptableResources == NULL) {
+        has_slot_preemption_ = true;
+        ls_syslog(LOG_INFO, "\
+%s: system has slots based preemption", __func__);
     }
 
     return 0;
 }
 
-/* has_preemption()
+/* has_slot_preemption()
  *
  * Do we have preemption defined in the scheduler.
  */
 bool_t
-has_preemption(void)
+has_slot_preemption(void)
 {
-    return has_preemption_;
+    return has_slot_preemption_;
 }
 
 /* load_preempt_plugin()

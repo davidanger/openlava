@@ -54,6 +54,9 @@ static int readLogSwitch(char *, struct logSwitchLog *);
 static int readNewJgrp(char *, struct jgrpLog *);
 static int readDelJgrp(char *, struct jgrpLog *);
 static int readModJgrp(char *, struct jgrpModLog *);
+static int readJobPreempting(char *, struct jobPreemptingLog *);
+static int readJobPreempted(char *, struct jobPreemptedLog *);
+
 static int writeJobNew(FILE *, struct jobNewLog *);
 static int writeJobMod(FILE *, struct jobModLog *);
 static int writeJobStart(FILE *, struct jobStartLog *);
@@ -85,6 +88,8 @@ static int writeStreamEnd(FILE *, struct endStream *);
 static int writeNewJgrp(FILE *, struct jgrpLog *);
 static int writeDelJgrp(FILE *, struct jgrpLog *);
 static int writeModJgrp(FILE *, struct jgrpModLog *);
+static int writeJobPreempting(FILE *, struct jobPreemptingLog *);
+static int writeJobPreempted(FILE *, struct jobPreemptedLog *);
 static int readJobAttrSet(char *, struct jobAttrSetLog* );
 static void freeLogRec(struct eventRec *);
 struct eventRec * lsbGetNextJobEvent(struct eventLogHandle *,
@@ -514,7 +519,6 @@ lsb_geteventrecord(FILE *log_fp, int *LineNum)
         return NULL;
     }
 
-
     if ((ccount = stripQStr(line, namebuf)) < 0
         || strlen(line) == ccount
         || strlen(namebuf) >= MAX_LSB_NAME_LEN) {
@@ -724,6 +728,13 @@ freeLogRec(struct eventRec *logRec)
                 free(logRec->eventLog.jobForceRequestLog.execHosts);
             return;
         case EVENT_LOG_SWITCH:
+            return;
+        case EVENT_JOB_PREEMPTING:
+            for (i = 0; i < logRec->eventLog.jobPreempting.numHosts; i++) {
+                _free_(logRec->eventLog.jobPreempting.hosts[i]);
+            }
+            _free_(logRec->eventLog.jobPreempting.hosts);
+        case EVENT_JOB_PREEMPTED:
             return;
         default:
             return;
@@ -1834,6 +1845,12 @@ lsb_puteventrec(FILE *log_fp, struct eventRec *logPtr)
         case EVENT_MOD_JGRP:
             etype = "MOD_JGRP";
             break;
+        case EVENT_JOB_PREEMPTING:
+            etype = "JOB_PREEMPTING";
+            break;
+        case EVENT_JOB_PREEMPTED:
+            etype = "JOB_PREEMPTED";
+            break;
         default:
             lsberrno = LSBE_UNKNOWN_EVENT;
             return -1;
@@ -1961,6 +1978,12 @@ lsb_puteventrec(FILE *log_fp, struct eventRec *logPtr)
             break;
         case EVENT_MOD_JGRP:
             lsberrno = writeModJgrp(log_fp, &(logPtr->eventLog.jgrpMod));
+            break;
+        case EVENT_JOB_PREEMPTING:
+            lsberrno = writeJobPreempting(log_fp, &(logPtr->eventLog.jobPreempting));
+            break;
+        case EVENT_JOB_PREEMPTED:
+            lsberrno = writeJobPreempted(log_fp, &(logPtr->eventLog.jobPreempted));
             break;
     }
 
@@ -3450,6 +3473,10 @@ getEventTypeAndKind(char *typeStr, int *eventKind)
         eventType = EVENT_DEL_JGRP;
     else if (strcmp(typeStr, "MOD_JGRP") == 0)
         eventType = EVENT_MOD_JGRP;
+    else if (strcmp(typeStr, "JOB_PREEMPTING") == 0)
+        eventType = EVENT_JOB_PREEMPTING;
+    else if (strcmp(typeStr, "JOB_PREEMPTED") == 0)
+        eventType = EVENT_JOB_PREEMPTED;
     else {
         lsberrno = LSBE_UNKNOWN_EVENT;
         *eventKind = EVENT_NON_JOB_RELATED;
@@ -3649,6 +3676,12 @@ readEventRecord(char *line, struct eventRec *logRec)
             break;
         case EVENT_MOD_JGRP:
             lsberrno = readModJgrp(line,&(logRec->eventLog.jgrpMod));
+            break;
+        case EVENT_JOB_PREEMPTING:
+            lsberrno = readJobPreempting(line, &(logRec->eventLog.jobPreempting));
+            break;
+        case EVENT_JOB_PREEMPTED:
+            lsberrno = readJobPreempted(line, &(logRec->eventLog.jobPreempted));
             break;
     }
 
@@ -4115,4 +4148,94 @@ lsb_getAcctFileTime(char * fileName)
         }
     }
     return lastAcctCreationTime;
+}
+
+/* writeJobPreempting()
+ */
+static int
+writeJobPreempting(FILE *fp, struct jobPreemptingLog *jLog)
+{
+    int cc;
+
+    if (fprintf(fp, " %d %d %d", jLog->jobid, jLog->idx, jLog->numHosts) < 0)
+        return LSBE_SYS_CALL;
+
+    for (cc = 0; cc < jLog->numHosts; cc++) {
+        if (addQStr(fp, jLog->hosts[cc]) < 0)
+            return LSBE_SYS_CALL;
+    }
+
+    if (fprintf(fp, "\n") < 0)
+        return LSBE_SYS_CALL;
+
+    return LSBE_NO_ERROR;
+}
+
+/* writeJobPreempted()
+ */
+static int
+writeJobPreempted(FILE *fp, struct jobPreemptedLog *jLog)
+{
+    if (fprintf(fp, " %d %d %d %d", jLog->jobid, jLog->idx,
+                jLog->preempted_by, jLog->preempted_by_idx) < 0)
+        return LSBE_SYS_CALL;
+
+    if (fprintf(fp, "\n") < 0)
+        return LSBE_SYS_CALL;
+
+    return LSBE_NO_ERROR;
+}
+
+/* readJobPreempting()
+ *
+ * Read the hostnames of the machines preempted
+ * by this job.
+ *
+ */
+static int
+readJobPreempting(char *line, struct jobPreemptingLog *jLog)
+{
+    int n;
+    int cc;
+    char host[MAXHOSTNAMELEN];
+
+    cc = sscanf(line, "%d%d%d%n", &jLog->jobid, &jLog->idx, &jLog->numHosts, &n);
+    if (cc != 3)
+        return LSBE_EVENT_FORMAT;
+
+    line += n + 1;
+    jLog->hosts = calloc(jLog->numHosts, sizeof(char *));
+
+    for (cc = 0; cc < jLog->numHosts; cc++) {
+
+        if ((n = stripQStr(line, host)) < 0) {
+            return LSBE_EVENT_FORMAT;
+        }
+
+        jLog->hosts[cc] = strdup(host);
+        line += n + 1;
+    }
+
+    return LSBE_NO_ERROR;
+}
+
+/* readJobPreempted()
+ *
+ * Read the jobid of the job that caused the preemtion
+ * and the one that got preempted.
+ */
+static int
+readJobPreempted(char *line, struct jobPreemptedLog *jLog)
+{
+    int n;
+    int cc;
+
+    cc = sscanf(line, "%d%d%d%d%n", &jLog->jobid, &jLog->idx,
+                &jLog->preempted_by, &jLog->preempted_by_idx, &n);
+    if (cc != 4)
+        return LSBE_EVENT_FORMAT;
+
+    line = line + n;
+
+    return LSBE_NO_ERROR;
 }

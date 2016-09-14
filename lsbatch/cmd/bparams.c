@@ -211,7 +211,14 @@ The maximum number of finished jobs that can be stored in current events file:\n
     /* If enabled then mbatchd will preempt jobs based on queue
      * priority and resource usage rather then slots.
      */
-    printf("Preemptable resources\n");
-    printf("    PREEMPTABLE_RESOURCES = %s\n\n", reply->preemptableResources);
+    if (reply->preemptableResources[0] != 0) {
+        printf("Preemptable resources\n");
+        printf("    PREEMPTABLE_RESOURCES = %s\n\n", reply->preemptableResources);
+    }
 
+    printf("Suspend job when preempting for slots:\n");
+    if (reply->preempt_slot_suspend)
+        printf("    PREEMPT_SLOT_SUSPEND = yes\n\n");
+    else
+        printf("    PREEMPT_SLOT_SUSPEND = no\n\n");
 }

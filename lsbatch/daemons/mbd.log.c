@@ -69,6 +69,8 @@ static int              replay_jobmsg(char *, int);
 static int              replay_newjgrp(char *, int);
 static int              replay_deljgrp(char *, int);
 static int              replay_modjgrp(char *, int);
+static int              replay_jobpreempting(char *, int);
+static int              replay_jobpreempted(char *, int);
 static int replay_logSwitch(char *, int);
 extern bool_t memberOfVacateList(struct lsQueueEntry *, struct lsQueue *);
 
@@ -102,6 +104,8 @@ static char             elogFname[MAXFILENAMELEN];
 static char             jlogFname[MAXFILENAMELEN];
 static char             elogFname2[MAXFILENAMELEN];
 
+/* Global for all events.
+ */
 static struct eventRec *logPtr;
 
 static int              logLoadIndex = TRUE;
@@ -165,6 +169,10 @@ static int merge_switch_file(void);
 static FILE *open_job_msg_file(const char *);
 static int put_job_msg(FILE *, const char *);
 
+/* Functions related to preemption
+ */
+static void log_job_preempting(struct jData *);
+static void log_job_preempted(struct jData *);
 
 /* init_log()
  */
@@ -279,6 +287,7 @@ init_log(void)
      * EOF try the next record.
      */
     lsberrno = LSBE_NO_ERROR;
+    lineNum = 0;
     while (lsberrno != LSBE_EOF) {
 
         /* Use single purpose reading getc2() routine.
@@ -446,6 +455,10 @@ replay_event(char *filename, int lineNum)
             return replay_deljgrp(filename, lineNum);
         case EVENT_MOD_JGRP:
             return replay_modjgrp(filename, lineNum);
+        case EVENT_JOB_PREEMPTING:
+            return replay_jobpreempting(filename, lineNum);
+        case EVENT_JOB_PREEMPTED:
+            return replay_jobpreempted(filename, lineNum);
         default:
             ls_syslog(LOG_ERR, "\
 %s: File %s at line %d: Invalid event_type %c",
@@ -1374,6 +1387,64 @@ replay_modjgrp(char *file, int num)
     return true;
 }
 
+/* replay_jobpreemting()
+ */
+static int
+replay_jobpreempting(char *file, int num)
+{
+    struct jobPreemptingLog *jLog;
+    LS_LONG_INT jobID;
+    struct jData *jPtr;
+    struct hData *hPtr;
+    int cc;
+
+    jLog = &logPtr->eventLog.jobPreempting;
+    jobID = LSB_JOBID(jLog->jobid, jLog->idx);
+
+    jPtr = getJobData(jobID);
+    if (jPtr == NULL) {
+        ls_syslog(LOG_ERR, "\
+%s: job %s not found in job list", __func__, lsb_jobid2str(jobID));
+        return false;
+    }
+
+    for (cc = 0; cc < jLog->numHosts; cc++) {
+        hPtr = getHostData(jLog->hosts[cc]);
+        if (hPtr == NULL) {
+            ls_syslog(LOG_ERR, "\
+%s: cannot found host %s preempted by job %s", __func__, jLog->hosts[cc],
+                      lsb_jobid2str(jPtr->jobId));
+        }
+        push_link(jPtr->preempted_hosts, hPtr);
+    }
+
+    return true;
+}
+
+static int
+replay_jobpreempted(char *file, int num)
+{
+    struct jobPreemptedLog *jLog;
+    LS_LONG_INT jobID;
+    struct jData *jPtr;
+
+    jLog = &logPtr->eventLog.jobPreempted;
+    jobID = LSB_JOBID(jLog->jobid, jLog->idx);
+
+    jPtr = getJobData(jobID);
+    if (jPtr == NULL) {
+        ls_syslog(LOG_ERR, "\
+%s: job %s not found in job list",
+                  __func__, lsb_jobid2str(jobID));
+        return false;
+    }
+
+    jPtr->preempted_by = LSB_JOBID(jLog->preempted_by,
+                                   jLog->preempted_by_idx);
+
+    return true;
+}
+
 int
 log_modifyjob(struct modifyReq * modReq, struct lsfAuth *auth)
 {
@@ -2278,6 +2349,96 @@ log_jobForce(struct jData* job, int uid, char *userName)
 
     FREEUP(jobForceRequestLog.execHosts);
 
+}
+
+/* log_job_preemption()
+ *
+ * Log the hosts of the job that is preempting others,
+ * log the preemptor jobid for all jobs that are being
+ * preempted.
+ */
+void
+log_job_preemption(struct jData *jPtr, link_t *rl)
+{
+    struct jData *jPtr2;
+    linkiter_t iter;
+
+    log_job_preempting(jPtr);
+
+    traverse_init(rl, &iter);
+    while ((jPtr2 = traverse_link(&iter)))
+        log_job_preempted(jPtr2);
+}
+
+/* log_job_preempting()
+ */
+static void
+log_job_preempting(struct jData *jPtr)
+{
+    struct jobPreemptingLog *jLog;
+    struct hData *hPtr;
+    linkiter_t iter;
+    int cc;
+
+    if (openEventFile(__func__) < 0) {
+        ls_syslog(LOG_ERR, "\
+%s: openEventFile() failed for job %s",
+                  __func__, lsb_jobid2str(jPtr->jobId));
+        mbdDie(MASTER_FATAL);
+    }
+
+    logPtr->type = EVENT_JOB_PREEMPTING;
+
+    jLog = &logPtr->eventLog.jobPreempting;
+    jLog->jobid = LSB_ARRAY_JOBID(jPtr->jobId);
+    jLog->idx = LSB_ARRAY_IDX(jPtr->jobId);
+
+    jLog->numHosts = LINK_NUM_ENTRIES(jPtr->preempted_hosts);
+    jLog->hosts = calloc(jLog->numHosts, sizeof(char *));
+
+    cc = 0;
+    traverse_init(jPtr->preempted_hosts, &iter);
+    while ((hPtr = traverse_link(&iter))) {
+        jLog->hosts[cc] = strdup(hPtr->host);
+        ++cc;
+    }
+
+    if (putEventRec(__func__) < 0) {
+        ls_syslog(LOG_ERR, "\
+%s: putEventRec() failed for job job %s",
+                  __func__, lsb_jobid2str(jPtr->jobId));
+        mbdDie(MASTER_FATAL);
+    }
+}
+
+/* log_job_preempted()
+ */
+static void
+log_job_preempted(struct jData *jPtr)
+{
+    struct jobPreemptedLog *jLog;
+
+    if (openEventFile(__func__) < 0) {
+        ls_syslog(LOG_ERR, "\
+%s: openEventFile() failed for job %s",
+                  __func__, lsb_jobid2str(jPtr->jobId));
+        mbdDie(MASTER_FATAL);
+    }
+
+    logPtr->type = EVENT_JOB_PREEMPTED;
+
+    jLog = &logPtr->eventLog.jobPreempted;
+    jLog->jobid = LSB_ARRAY_JOBID(jPtr->jobId);
+    jLog->idx = LSB_ARRAY_IDX(jPtr->jobId);
+    jLog->preempted_by = LSB_ARRAY_JOBID(jPtr->preempted_by);
+    jLog->preempted_by_idx = LSB_ARRAY_IDX(jPtr->preempted_by);
+
+    if (putEventRec(__func__) < 0) {
+        ls_syslog(LOG_ERR, "\
+%s: putEventRec() failed for job job %s",
+                  __func__, lsb_jobid2str(jPtr->jobId));
+        mbdDie(MASTER_FATAL);
+    }
 }
 
 /* openEventFile()

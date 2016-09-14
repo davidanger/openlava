@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 David Bigagli
+ * Copyright (C) 2015 - 2016 David Bigagli
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of version 2 of the GNU General Public License as
@@ -24,6 +24,9 @@ static bool_t
 is_pend_for_license(struct jData *);
 static bool_t
 is_preemptable_resource(const char *);
+static bool_t
+is_pend_for_slot(struct jData *);
+
 
 /* prm_init()
  */
@@ -49,11 +52,15 @@ prm_elect_preempt(struct qData *qPtr, link_t *rl, int numjobs)
     struct jData *jPtr2;
     uint32_t numPEND;
     uint32_t numSLOTS;
+    uint32_t num_harvest;
     linkiter_t iter;
 
-    if (logclass & LC_PREEMPT)
+    if (logclass & LC_PREEMPT) {
         ls_syslog(LOG_INFO, "\
-%s: entering preemptive queue %s", __func__, qPtr->queue);
+%s: entering preemptive queue %s maxPreemptJobs %d preempt_slot_suspend %d",
+                  __func__, qPtr->queue, mbdParams->maxPreemptJobs,
+                  mbdParams->preempt_slot_suspend);
+    }
 
     /* Jobs that can eventually trigger
      * preemption causing other jobs to
@@ -90,16 +97,21 @@ prm_elect_preempt(struct qData *qPtr, link_t *rl, int numjobs)
             if (! is_pend_for_license(jPtr)) {
                 if (logclass & LC_PREEMPT) {
                     ls_syslog(LOG_INFO, "\
-%s: job %s queue %s can trigger preemption", __func__,
-                              lsb_jobid2str(jPtr->jobId), qPtr->queue);
+%s: job %s queue %s can trigger resource %s preemption", __func__,
+                              lsb_jobid2str(jPtr->jobId),
+                              qPtr->queue, mbdParams->preemptableResources);
                 }
                 goto dalsi;
             }
         } else {
-            /* mbatchd preempts for slots
-             */
-            if (! (jPtr->jStatus & JOB_STAT_PEND
-                   && jPtr->newReason == 0)) {
+
+            if (! is_pend_for_slot(jPtr)) {
+
+                if (logclass & LC_PREEMPT) {
+                    ls_syslog(LOG_INFO, "\
+%s: job %s queue %s can trigger preemption", __func__,
+                              lsb_jobid2str(jPtr->jobId), qPtr->queue);
+                }
                 goto dalsi;
             }
         }
@@ -108,10 +120,17 @@ prm_elect_preempt(struct qData *qPtr, link_t *rl, int numjobs)
         /* Save the candidate in jl
          */
         enqueue_link(jl, jPtr);
-        if (logclass & LC_PREEMPT)
+        if (logclass & LC_PREEMPT) {
             ls_syslog(LOG_INFO, "\
 %s: job %s queue %s can trigger preemption", __func__,
                       lsb_jobid2str(jPtr->jobId), qPtr->queue);
+        }
+
+        /* Preempt only a sebset of hosts by default 1
+         */
+        if (numPEND > mbdParams->maxPreemptJobs)
+            break;
+
     dalsi:
         /* Fine della coda
          */
@@ -122,13 +141,12 @@ prm_elect_preempt(struct qData *qPtr, link_t *rl, int numjobs)
     }
 
     if (numPEND == 0) {
-        fin_link(jl);
 
+        fin_link(jl);
         if (logclass & LC_PREEMPT)
             ls_syslog(LOG_INFO, "\
 %s: No pending jobs to trigger preemption in queue %s",
                       __func__, qPtr->queue);
-
         return 0;
     }
 
@@ -137,7 +155,6 @@ prm_elect_preempt(struct qData *qPtr, link_t *rl, int numjobs)
      */
     while ((jPtr = pop_link(jl))) {
         struct qData *qPtr2;
-        int num;
 
         /* Initialiaze the iterator on the list
          * of preemptable queue, the list is
@@ -145,8 +162,12 @@ prm_elect_preempt(struct qData *qPtr, link_t *rl, int numjobs)
          * was configured.
          */
         traverse_init(jPtr->qPtr->preemptable, &iter);
+        /* Number of slots this job wants
+         */
         numSLOTS = jPtr->shared->jobBill.numProcessors;
-        num = 0;
+        /* Number of slots we were able to harvest
+         */
+        num_harvest = 0;
 
         while ((qPtr2 = traverse_link(&iter))) {
 
@@ -155,7 +176,7 @@ prm_elect_preempt(struct qData *qPtr, link_t *rl, int numjobs)
 
             if (logclass & LC_PREEMPT)
                 ls_syslog(LOG_INFO, "\
-%s: job %s queue %s trying to canibalize %d slots in queue %s",
+%s: job %s queue %s trying to harvest %d slots in queue %s",
                           __func__, lsb_jobid2str(jPtr->jobId),
                           qPtr2->queue, numSLOTS, qPtr->queue, qPtr2->queue);
 
@@ -178,40 +199,81 @@ prm_elect_preempt(struct qData *qPtr, link_t *rl, int numjobs)
                 if (jPtr2->jStatus & JOB_STAT_SIGNAL)
                     continue;
 
-                num = num + jPtr2->shared->jobBill.numProcessors;
+                /* This job was already preempted
+                 */
+                if (jPtr2->preempted_by > 0)
+                    continue;
+
+                num_harvest = num_harvest + jPtr2->shared->jobBill.numProcessors;
+                /* Hop in the list of jobs that will be preempted
+                 * if we harvest enough slots.
+                 */
                 push_link(rl, jPtr2);
 
-                if (logclass & LC_PREEMPT)
+                if (logclass & LC_PREEMPT) {
                     ls_syslog(LOG_INFO, "\
 %s: job %s gives up %d slots got %d want %d", __func__,
                               lsb_jobid2str(jPtr2->jobId),
                               jPtr2->shared->jobBill.numProcessors,
+                              num_harvest, numSLOTS);
+                }
 
-                              num, numSLOTS);
-
-                jPtr2->jobid_preempted_me = jPtr->jobId;
+                jPtr2->preempted_by = jPtr->jobId;
 
                 for (cc = 0; cc < jPtr2->numHostPtr; cc++) {
-                    ls_syslog(LOG_INFO, "\
-%s: job %s exec hosts %s", __func__, lsb_jobid2str(jPtr->jobId),
-                             jPtr2->hPtr[cc]->host);
+
+                    if (logclass & LC_PREEMPT) {
+                        ls_syslog(LOG_INFO, "\
+%s: job %s preempting exec hosts %s", __func__, lsb_jobid2str(jPtr->jobId),
+                                  jPtr2->hPtr[cc]->host);
+                    }
+
                     push_link(jPtr->preempted_hosts, jPtr2->hPtr[cc]);
                 }
 
-                if (num >= numSLOTS)
-                    goto pryc;
+                if (num_harvest >= numSLOTS) {
+
+                    fin_link(jl);
+                    if (logclass & LC_PREEMPT) {
+                        ls_syslog(LOG_INFO, "\
+%s: job %s did harvest enough slots wanted %d got %d", __func__,
+                                  lsb_jobid2str(jPtr->jobId), numSLOTS, num_harvest);
+                    }
+                    /* Log the job preemption events
+                     */
+                    log_job_preemption(jPtr, rl);
+
+                    return LINK_NUM_ENTRIES(rl);
+                }
+
+            } /* for running jobs in preemptable queue */
+
+        } /* while (preemptable queues) */
+
+        /* We did not find the number of necessary slots
+         * so undo the operation.
+         */
+        if (num_harvest < numSLOTS) {
+
+            if (logclass & LC_PREEMPT) {
+                ls_syslog(LOG_INFO, "\
+%s: job %s did not harvest enough slots wanted %d got %d", __func__,
+                          lsb_jobid2str(jPtr->jobId), numSLOTS, num_harvest);
             }
+            while ((jPtr2 = pop_link(rl)))
+                jPtr2->preempted_by = 0;
+            while (pop_link(jPtr->preempted_hosts))
+                ;
         }
-    pryc:;
-        if (LINK_NUM_ENTRIES(rl) >= numjobs)
+
+        /* Only try a subset of hosts
+         */
+        if (LINK_NUM_ENTRIES(rl) >= mbdParams->maxPreemptJobs)
             break;
-    }
 
-    fin_link(jl);
+    } /* while jobs on preemptive list */
 
-    if (logclass & LC_PREEMPT)
-        ls_syslog(LOG_INFO, "%s: leaving queue %s",
-                  __func__, qPtr->queue);
+    assert(LINK_NUM_ENTRIES(rl) == 0);
 
     return LINK_NUM_ENTRIES(rl);
 }
@@ -327,4 +389,19 @@ is_preemptable_resource(const char *res)
     }
 
     return false;
+}
+
+/* is_pend_for_slot()
+ */
+static bool_t
+is_pend_for_slot(struct jData *jPtr)
+{
+    /* mbatchd preempts for slots
+     */
+    if (!(jPtr->jStatus & JOB_STAT_PEND
+          && jPtr->newReason == 0)) {
+        return false;
+    }
+
+    return true;
 }

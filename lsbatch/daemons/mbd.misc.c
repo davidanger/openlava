@@ -1552,6 +1552,7 @@ checkParams(struct infoReq *req, struct parameterInfo *reply)
         reply->preemptableResources = mbdParams->preemptableResources;
     else
         reply->preemptableResources = "";
+    reply->preempt_slot_suspend = mbdParams->preempt_slot_suspend;
 }
 
 void

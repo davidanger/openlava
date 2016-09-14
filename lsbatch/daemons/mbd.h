@@ -182,8 +182,6 @@ extern struct objPRMO *pRMOPtr;
 
 #define  JOB_PREEMPT_WAIT(s)  ((s)->jStatus & JOB_STAT_RSRC_PREEMPT_WAIT)
 
-#define  MARKED_WILL_BE_PREEMPTED(s)  ((s)->jFlags & JFLAG_WILL_BE_PREEMPTED)
-
 #define FORALL_PRMPT_RSRCS(resn) if (pRMOPtr != NULL) { \
     int _pRMOindex;                                     \
     for (_pRMOindex = 0;                                \
@@ -366,7 +364,7 @@ struct jData {
     char *run_rusage;   /* "rusage[x=1:y=2||z=3:w=4]" */
     int abs_run_limit; /* absolute run limit in seconds */
     link_t *preempted_hosts;
-    LS_LONG_INT jobid_preempted_me;
+    LS_LONG_INT preempted_by;
 };
 
 
@@ -1581,6 +1579,7 @@ extern int do_resLimitInfo(XDR *, int, struct sockaddr_in *, struct LSFHeader *)
 extern int stop_job(struct jData *, int);
 extern char *str_flags(int);
 extern void tryResume(struct qData *);
-extern inline bool_t has_preemption(void);
+extern inline bool_t has_slot_preemption(void);
+extern void log_job_preemption(struct jData *, link_t *);
 
 #endif /* _MBD_HEADER_ */

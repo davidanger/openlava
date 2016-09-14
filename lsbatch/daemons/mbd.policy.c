@@ -1032,7 +1032,8 @@ getLsbUsable(void)
             hReason = PEND_HOST_LOCKED;
         else if (LS_ISLOCKEDM(hPtr->limStatus))
             hReason = PEND_HOST_LOCKED_MASTER;
-        else if (0 && hPtr->numJobs >= hPtr->maxJobs) {
+        else if (! has_slot_preemption()
+                 && hPtr->numJobs >= hPtr->maxJobs) {
             /* Disable this in case preemption is defined.
              * We will check this later on in getHostJobSlots1()
              */
@@ -1045,7 +1046,7 @@ getLsbUsable(void)
             hReason = ldReason;
 
         if (hReason == PEND_HOST_JOB_LIMIT
-            && has_preemption())
+            && has_slot_preemption())
             hReason = 0;
 
         if (hReason) {

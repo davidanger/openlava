@@ -499,6 +499,9 @@ xdr_parameterInfo(XDR *xdrs,
     if (! xdr_var_string(xdrs, &paramInfo->preemptableResources))
         return false;
 
+    if (! xdr_int(xdrs, &paramInfo->preempt_slot_suspend))
+        return false;
+
     return true;
 }
 

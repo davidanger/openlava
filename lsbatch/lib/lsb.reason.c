@@ -115,10 +115,13 @@ lsb_suspreason (int reasons, int subreasons, struct loadIndexLog *ld)
             sprintf(msgbuf, " CPULIMIT was reached;\n");
         else if (subreasons & SUB_REASON_MEMLIMIT)
             sprintf(msgbuf," MEMLIMIT was reached;\n");
-    } else
+    } else if (reasons & SUSP_MBD_PREEMPT) {
+        sprintf(msgbuf, "Preempted by mbatchd;\n");
+    } else {
         sprintf (msgbuf, " Unknown suspending reason code: %d\n", reasons);
-    return msgbuf;
+    }
 
+    return msgbuf;
 }
 
 char *

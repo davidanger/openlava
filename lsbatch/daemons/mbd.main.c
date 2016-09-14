@@ -196,6 +196,7 @@ extern int do_setJobAttr(XDR *, int, struct sockaddr_in *, char *,
                          struct LSFHeader *, struct lsfAuth *);
 static void preempt(void);
 static void decay_run_time(void);
+static int requeue_job(struct jData *);
 
 static struct chanData *chans;
 
@@ -1422,8 +1423,10 @@ preempt(void)
 
             if (mbdParams->preemptableResources)
                 stop_job(jPtr, JFLAG_RES_PREEMPTED);
-            else
+            else if (mbdParams->preempt_slot_suspend)
                 stop_job(jPtr, JFLAG_SLOT_PREEMPTED);
+            else
+                requeue_job(jPtr);
         }
 
         fin_link(rl);
@@ -1433,8 +1436,7 @@ preempt(void)
         ls_syslog(LOG_INFO, "%s: leaving ...", __func__);
 }
 
-#if 0
-static int requeue_job(struct jData *);
+
 
 static int
 requeue_job(struct jData *jPtr)
@@ -1445,7 +1447,6 @@ requeue_job(struct jData *jPtr)
 
     jPtr->shared->jobBill.beginTime = time(NULL) + msleeptime * 2;
     jPtr->newReason = PEND_JOB_PREEMPTED;
-    jPtr->jFlags |= JFLAG_JOB_PREEMPTED;
 
     if (logclass & LC_PREEMPT)
         ls_syslog(LOG_DEBUG, "\
@@ -1474,7 +1475,6 @@ requeue_job(struct jData *jPtr)
 
     return 0;
 }
-#endif
 
 char *
 str_flags(int flag)

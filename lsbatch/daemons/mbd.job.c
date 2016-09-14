@@ -1888,8 +1888,6 @@ jobStatusSignal(sbdReplyType reply, struct jData *jData, int sigValue,
             }
             else if (!(jData->jStatus & JOB_STAT_USUSP)) {
                 jData->newReason |= (SUSP_USER_STOP | SUSP_MBD_LOCK);
-                ls_syslog(LOG_INFO, "\
-%s: job %s set SUSP_MBD_LOCK", __func__, lsb_jobid2str(jData->jobId));
                 jStatusChange(jData, JOB_STAT_USUSP, LOG_IT, fname);
             }
             jData->jStatus &= ~JOB_STAT_SIGNAL;
@@ -3173,9 +3171,11 @@ jStatusChange(struct jData *jData,
         == MASK_STATUS (oldStatus & ~JOB_STAT_UNKWN))
         return;
 
-    ls_syslog(LOG_INFO, "\
+    if (logclass & (LC_TRACE |LC_PREEMPT)) {
+        ls_syslog(LOG_INFO, "\
 %s: job %s oldStatus 0x%x newStatus 0x%x", __func__, lsb_jobid2str(jData->jobId),
-              jData->jStatus, newStatus);
+                  jData->jStatus, newStatus);
+    }
 
     newStatus = MASK_STATUS(newStatus);
     if (eventTime == LOG_IT && (jData->jStatus & JOB_STAT_RESERVE))
@@ -4589,6 +4589,9 @@ initJData(struct jShared  *shared)
 {
     struct jData *job;
 
+    /* We initialize the fields even if we calloc() so
+     * to make sure we know all fields we work with.
+     */
     job = my_calloc(1, sizeof (struct jData), "initJData");
     job->shared = createSharedRef(shared);
     job->jobId = 0;
@@ -4692,6 +4695,7 @@ initJData(struct jShared  *shared)
     job->run_rusage = NULL;
     job->abs_run_limit = -1;
     job->preempted_hosts = make_link();
+    job->preempted_by = 0;
 
     return job;
 }
@@ -7431,8 +7435,10 @@ tryResume(struct qData *qPtr)
 
                 if (jp->jFlags & JFLAG_RES_PREEMPTED)
                     jp->jFlags &= ~JFLAG_RES_PREEMPTED;
-                if (jp->jFlags & JFLAG_SLOT_PREEMPTED)
+                if (jp->jFlags & JFLAG_SLOT_PREEMPTED) {
                     jp->jFlags &= ~JFLAG_SLOT_PREEMPTED;
+                    jp->preempted_by = 0;
+                }
 
                 adjLsbLoad (jp, true, true);
                 if (logclass & (LC_EXEC))
@@ -7454,15 +7460,15 @@ shouldResume (struct jData *jp, int *resumeSig)
     static char fname[] = "shouldResume";
     int saveReason, saveSubReasons, returnCode = RESUME_JOB;
 
-    if (logclass & (LC_EXEC));
-
-    ls_syslog(LOG_INFO, "\
+    if (logclass & (LC_TRACE | LC_PREEMPT)) {
+        ls_syslog(LOG_INFO, "\
 %s: job %s jStatus 0x%x reasons 0x%x subreason %d numHosts %d", __func__,
-              lsb_jobid2str(jp->jobId), jp->jStatus,
-              jp->newReason, jp->subreasons, jp->numHostPtr);
+                  lsb_jobid2str(jp->jobId), jp->jStatus,
+                  jp->newReason, jp->subreasons, jp->numHostPtr);
+    }
 
-    if (   jp->jFlags & JFLAG_URGENT_NOSTOP
-           && *resumeSig == SIG_RESUME_USER) {
+    if (jp->jFlags & JFLAG_URGENT_NOSTOP
+        && *resumeSig == SIG_RESUME_USER) {
         jp->newReason = 0;
         jp->newReason |= SUSP_USER_RESUME;
         *resumeSig = 0;
@@ -7579,17 +7585,24 @@ shouldResume (struct jData *jp, int *resumeSig)
             if (logclass & LC_PREEMPT) {
                 ls_syslog(LOG_INFO, "\
 %s: job %s cannot resume jflags %s reason SUSP_MBD_PREEMPT", __func__,
-                          str_flags(jp->jFlags),
-                          lsb_jobid2str(jp->jobId));
+                          lsb_jobid2str(jp->jobId),
+                          str_flags(jp->jFlags));
+
             }
             jp->newReason |= SUSP_MBD_PREEMPT;
             return CANNOT_RESUME;
         }
 
-        ls_syslog(LOG_INFO, "\
+        if (logclass & LC_PREEMPT) {
+            ls_syslog(LOG_INFO, "\
 %s: job %s can resume jflags %s", __func__, lsb_jobid2str(jp->jobId),
-                  str_flags(jp->jFlags),
+                      str_flags(jp->jFlags));
+        }
 
+        /* clear the job and the preempted_by jobid
+         * in the caller after we send the resume
+         * signal.
+         */
         *resumeSig = SIG_RESUME_OTHER;
         jp->newReason &= ~SUSP_MBD_PREEMPT;
         return RESUME_JOB;
@@ -7803,7 +7816,7 @@ should_resume_by_job(struct jData *jPtr)
 {
     struct jData *jPtr2;
 
-    jPtr2 = getJobData(jPtr->jobid_preempted_me);
+    jPtr2 = getJobData(jPtr->preempted_by);
     if (jPtr2 == NULL)
         return true;
 
