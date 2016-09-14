@@ -3,6 +3,8 @@ Release notes for OpenLava versions
 3.3.3
 ======
 
+-- Fix mbatchd bug in which hostnames were sent to the library in a wrong
+   causing bjobs to print pending reasons in inverse order.
 -- Implement bsub -Jd to support specifying job description to jobs.
 -- Implement tech preview of lsb.resources.
 -- Implement the bresource command and the lsb_getlimits() API.

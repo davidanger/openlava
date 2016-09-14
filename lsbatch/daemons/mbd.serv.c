@@ -226,9 +226,13 @@ do_jobInfoReq(XDR *xdrs,
     if (jobInfoReq.options & HOST_NAME) {
         jobInfoHead.hostNames = my_calloc(numofhosts(),
                                           sizeof(char *), __func__);
-        for (hPtr = (struct hData *)hostList->back;
+        /* Traverse the list in increasing hostId number
+         * since the library uses it to match the hostname
+         * with the id and the correct pending reason.
+         */
+        for (hPtr = (struct hData *)hostList->forw;
              hPtr != (void *)hostList;
-             hPtr = (struct hData *)hPtr->back) {
+             hPtr = (struct hData *)hPtr->forw) {
             jobInfoHead.hostNames[i] = hPtr->host;
             ++i;
         }
