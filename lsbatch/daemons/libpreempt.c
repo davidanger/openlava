@@ -128,7 +128,7 @@ prm_elect_preempt(struct qData *qPtr, link_t *rl, int numjobs)
 
         /* Preempt only a sebset of hosts by default 1
          */
-        if (numPEND > mbdParams->maxPreemptJobs)
+        if (numPEND >= mbdParams->maxPreemptJobs)
             break;
 
     dalsi:
