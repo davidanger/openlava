@@ -18,15 +18,9 @@
  */
 
 #include "cmd.h"
-#include <netdb.h>
-#include <ctype.h>
 
-#define NL_SETN 8
-
-
-extern char *myGetOpt (int nargc, char **nargv, char *ostr);
+extern char *myGetOpt(int nargc, char **nargv, char *ostr);
 extern int getConfirm(char *);
-
 static void ctrlHost(char *, int, int, char *);
 static int  doConfirm(int, char *);
 static int exitrc;
@@ -34,7 +28,7 @@ static char *opStr;
 static struct hostInfoEnt *getHostList(int *numHosts, char **inputHosts);
 
 int
-bhc (int argc, char *argv[], int opCode)
+bhc(int argc, char *argv[], int opCode)
 {
     struct hostInfoEnt *hostInfo ;
     char **hostPoint ;
@@ -53,7 +47,7 @@ bhc (int argc, char *argv[], int opCode)
                 break;
             case 'C':
                 if (strlen(optarg) > MAXLINELEN-1) {
-                    printf ("Message too long, truncated to %d char.\n", MAXLINELEN-1);
+                    printf("Message too long, truncated to %d char.\n", MAXLINELEN-1);
                     strncpy(message, optarg, MAXLINELEN-1);
                     message[MAXLINELEN-1]='\0';
                 } else
@@ -125,7 +119,7 @@ bhc (int argc, char *argv[], int opCode)
 }
 
 static void
-ctrlHost (char *host, int hStatus, int opCode, char *message)
+ctrlHost(char *host, int hStatus, int opCode, char *message)
 {
 
     if (lsb_hostcontrol(host, opCode, message) < 0) {
@@ -135,6 +129,7 @@ ctrlHost (char *host, int hStatus, int opCode, char *message)
         exitrc = -1;
         return;
     }
+
     if (opCode == HOST_OPEN) {
         if (hStatus & (HOST_STAT_BUSY | HOST_STAT_WIND | HOST_STAT_LOCKED_MASTER
                        | HOST_STAT_LOCKED | HOST_STAT_FULL)) {
@@ -159,7 +154,7 @@ ctrlHost (char *host, int hStatus, int opCode, char *message)
 }
 
 static int
-doConfirm (int opCode, char *host)
+doConfirm(int opCode, char *host)
 {
     char msg[MAXLINELEN];
 
@@ -168,7 +163,7 @@ doConfirm (int opCode, char *host)
 
     sprintf(msg, "\n%s %s? [y/n] ", opStr, host);
 
-    return (getConfirm(msg));
+    return getConfirm(msg);
 
 }
 
@@ -200,4 +195,3 @@ getHostList(int *numHosts, char **inputHosts)
 
     return hostInfo;
 }
-
