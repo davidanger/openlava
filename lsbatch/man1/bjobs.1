@@ -189,11 +189,11 @@ and to output for all bjobs options with short form output except for
 Sets the customized output format.
 .IP
 Specifies which bjobs fields (or aliases instead of the full field
-names), in which order to display. The output width of each field
+names), and in which order to display. The output width of each field
 is unlimited.
 .IP
 Use \fIdelimiter=\fR to set the delimiting character to display
-between different headers and fields. This must be a single charater.
+between different headers and fields. This must be a single character.
 By default, the delimiter is a space.
 .IP
 To specify special delimiter characters in a csh environment (for
@@ -203,7 +203,7 @@ the -o statement:
 .IP
 bjobs ... -o '\fIfield_name\fR ... [delimiter="\fIcharacter\fR"]'
 .IP
-The -o option does not work with bjobs options of -l, -UF, -WF, -W, -WL, -WP.
+The -o option does not work with the bjobs options -l, -UF, -WF, -W, -WL, -WP.
 .IP
 If a field has no value, the output is a dash (-).
 .IP
