@@ -3316,6 +3316,10 @@ jStatusChange(struct jData *jData,
             jData->subreasons = 0;
             jData->reserveTime = 0;
             jData->jFlags &= ~JFLAG_SEND_SIG;
+            /* If the job is starting or re-starting clean the
+             * eventual preempted_by.
+             */
+            jData->preempted_by = 0;
         }
     }
 
