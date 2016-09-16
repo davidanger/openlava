@@ -487,7 +487,6 @@ initHData(struct hData *hData)
     hData->pxyRsvJL = NULL;
     hData->leftRusageMem = INFINIT_LOAD;
     hData->affinity = FALSE;
-    hData->dres_tab = NULL;
 
     return hData;
 }
