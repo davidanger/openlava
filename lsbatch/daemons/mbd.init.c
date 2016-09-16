@@ -431,7 +431,13 @@ initHData(struct hData *hData)
     int   i;
 
     if (hData == NULL) {
+        /* Allocate memory only when creating the host data.
+         * When hData in input is not NULL than we are copying
+         * the host data from a temporary storage.
+         */
         hData = my_calloc(1, sizeof(struct hData), "initHData");
+        hData->dres_tab = calloc(1, sizeof(hTab));
+        h_initTab_(hData->dres_tab, 11);
     }
 
     hData->host = NULL;
@@ -481,8 +487,7 @@ initHData(struct hData *hData)
     hData->pxyRsvJL = NULL;
     hData->leftRusageMem = INFINIT_LOAD;
     hData->affinity = FALSE;
-    hData->dres_tab = calloc(1, sizeof(hTab));
-    h_initTab_(hData->dres_tab, 11);
+    hData->dres_tab = NULL;
 
     return hData;
 }
@@ -1678,6 +1683,8 @@ mkLostAndFoundHost(void)
 {
     struct hData *lost;
     struct hData host;
+
+    memset(&host, 0, sizeof(struct hData));
 
     initHData(&host);
     host.host = LOST_AND_FOUND;
