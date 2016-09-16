@@ -3217,7 +3217,9 @@ updHostList(void)
         hPtr->hostId = cc;
         ++cc;
 
-        /* Hopsa in da lista...
+        /* Hopsa in da lista... To traverse the host list
+         * in increasing hostId order, as bjobs expects,
+         * go via the forward pointer.
          */
         listInsertEntryAtBack(hostList, (LIST_ENTRY_T *)hPtr);
 
