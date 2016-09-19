@@ -171,6 +171,7 @@ W:F:D:S:C:M:O:G:P:Ip|Is|I|r|H|x|N|B|h|V|X:K|";
     req->delOptions = 0;
     req->delOptions2 = 0;
     req->userPriority = -1;
+    req->cwd = NULL;
 
     if ((req->projectName = getenv("LSB_DEFAULTPROJECT")) != NULL)
         req->options |= SUB_PROJECT_NAME;

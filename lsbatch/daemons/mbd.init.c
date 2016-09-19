@@ -157,6 +157,7 @@ static int parse_host_shares(const char *, struct qData *qp);
 static void make_hsacct(struct hData *, char *, int);
 static bool_t check_ownership(struct qData *);
 static bool_t has_slot_preemption_;
+static void add_host_dedicated_res(struct hData *, struct hostInfo *);
 
 int
 minit(int mbdInitFlags)
@@ -431,7 +432,13 @@ initHData(struct hData *hData)
     int   i;
 
     if (hData == NULL) {
+        /* Allocate memory only when creating the host data.
+         * When hData in input is not NULL than we are copying
+         * the host data from a temporary storage.
+         */
         hData = my_calloc(1, sizeof(struct hData), "initHData");
+        hData->dres_tab = calloc(1, sizeof(hTab));
+        h_initTab_(hData->dres_tab, 11);
     }
 
     hData->host = NULL;
@@ -845,6 +852,7 @@ addHost(struct hostInfo *lsf,
         hPtr->maxTmp    = lsf->maxTmp;
         hPtr->nDisks    = lsf->nDisks;
         hPtr->resBitMaps  = getResMaps(lsf->nRes, lsf->resources);
+        add_host_dedicated_res(hPtr, lsf);
 
         /* Fill up the hostent structure that is not used
          * anywhere anyway...
@@ -1675,6 +1683,8 @@ mkLostAndFoundHost(void)
 {
     struct hData *lost;
     struct hData host;
+
+    memset(&host, 0, sizeof(struct hData));
 
     initHData(&host);
     host.host = LOST_AND_FOUND;
@@ -3208,7 +3218,9 @@ updHostList(void)
         hPtr->hostId = cc;
         ++cc;
 
-        /* Hopsa in da lista...
+        /* Hopsa in da lista... To traverse the host list
+         * in increasing hostId order, as bjobs expects,
+         * go via the forward pointer.
          */
         listInsertEntryAtBack(hostList, (LIST_ENTRY_T *)hPtr);
 
@@ -4321,4 +4333,34 @@ check_ownership(struct qData *qPtr)
     }
 
     return true;
+}
+
+/* add_host_dedicated_res()
+ */
+static void
+add_host_dedicated_res(struct hData *hPtr, struct hostInfo *lsf)
+{
+    int cc;
+    hEnt *ent;
+
+    if (! daemonParams[MBD_DEDICATED_RESOURCES].paramValue)
+        return;
+
+    for (cc = 0; cc < lsf->nRes; cc++) {
+        /* This resource giving us from openlava base
+         * for this host, is also configured as dedicated
+         * resources in lsf.conf. Remember if in this host.
+         */
+        if (! (ent = h_getEnt_(d_res_tab, lsf->resources[cc])))
+            continue;
+
+        if (logclass & LC_TRACE) {
+            ls_syslog(LOG_INFO, "\
+%s: resource %s is dedicated on host %s", __func__, lsf->resources[cc],
+                      hPtr->host);
+        }
+
+        ent = h_addEnt_(hPtr->dres_tab, strdup(lsf->resources[cc]), NULL);
+        ent->hData = strdup(lsf->resources[cc]);
+    }
 }

@@ -7,6 +7,14 @@ Master
 
 4.0beta1
 ========
+-- Fix mbatchd core dump that happens if jobs are submitted with -t option
+   of bsub and the job is terminated while pending.
+-- Added bjobs -o to support custom output fields
+-- Added bjobs -cwd to specify the job current working directory
+-- Implement MBD_DEDICATED_RESOURCES in lsf.conf. These are host based boolean
+   resources that must be defined in lsf.cluster file. A job must explicitly
+   specify a dedicated resource to get allocated the host with that resource.
+-- Fix a typo in lsb.queues.in, preemption was spelled with double t.
 -- Fix compatibility probelms when replaying older lsb.events.
 -- Fix the XDR error in the badmin qclose command.
 -- Add man page for $LSF_ENVDIR/openlava
@@ -105,6 +113,8 @@ know the exact commit.
 3.3.3
 ======
 
+-- Fix mbatchd bug in which hostnames were sent to the library in a wrong
+   causing bjobs to print pending reasons in inverse order.
 -- Implement bsub -Jd to support specifying job description to jobs.
 -- Implement tech preview of lsb.resources.
 -- Implement the bresource command and the lsb_getlimits() API.

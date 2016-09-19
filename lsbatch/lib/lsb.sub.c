@@ -145,7 +145,12 @@ lsb_submit(struct submit  *jobSubReq, struct submitReply *submitRep)
         }
     }
 
-    submitReq.cwd = cwd;
+    if (jobSubReq->cwd == NULL) {
+        cwd[0] = '\0';
+        submitReq.cwd = cwd;
+    }
+    else
+        submitReq.cwd = jobSubReq->cwd;
 
     if ((grpEntry = getgrgid(getgid())))
         putEnv("LSB_UNIXGROUP", grpEntry->gr_name);
@@ -2276,10 +2281,11 @@ getUserInfo(struct submitReq *submitReq, struct submit *jobSubReq)
         goto errorParent;
     }
 
-
-    if(mygetwd_(submitReq->cwd) == NULL) {
-        lsberrno = LSBE_SYS_CALL;
-        goto errorParent;
+    if (submitReq->cwd[0] == '\0') {
+        if(mygetwd_(submitReq->cwd) == NULL) {
+            lsberrno = LSBE_SYS_CALL;
+            goto errorParent;
+        }
     }
     cwdLen = strlen (submitReq->cwd) + 1;
 
@@ -2626,6 +2632,19 @@ gettimefor(char *toptarg, time_t *tTime)
 }
 
 void
+strip_invalidspan(char *str) {
+#define SPANSTRIP  "span[hosts=-1]"
+    int sl;
+    char *p;
+
+    sl = strlen(SPANSTRIP);
+
+    while ((p = strstr(str, SPANSTRIP)) != NULL) {
+        memmove(p, p+sl, strlen(p) + 1 - sl);
+    }
+}
+
+void
 bsub_usage(int options)
 {
     fprintf(stderr, "Usage");
@@ -2670,6 +2689,7 @@ bsub_usage(int options)
 	    fprintf(stderr, ": bsub [-h] [-V] [-B] [-H] [-I | -Ip | -Is | -K] [-N] [-r] [-x]\n");
 	    fprintf(stderr, "\t    [-a esub_parameters] [-b [[month:]day:]hour:minute] [-C core_limit]\n");
 	    fprintf(stderr, "\t    [-c [hour:]minute[/host_name | /host_model] | -cn]\n");
+	    fprintf(stderr, "\t    [-cwd job_current_work_dir]\n");
 	    fprintf(stderr, "\t    [-D data_limit] [-e err_file]\n");
 	    fprintf(stderr, "\t    [-E \"pre_exec_command [argument ...]\"]\n");
 	    fprintf(stderr, "\t    [-f \"local_file op [remote_file]\" ...]\n");
@@ -2892,6 +2912,7 @@ setOption_(int argc, char **argv, char *template, struct submit *req,
                          }
                     }
                     req->options |= SUB_RES_REQ;
+                    strip_invalidspan(req->resReq);
                 }
                 break;
 
@@ -3249,6 +3270,11 @@ setOption_(int argc, char **argv, char *template, struct submit *req,
                 break;
 
             case 'c':
+                if (strcmp(optarg, "wd") == 0) {
+                    req->cwd = argv[optind];
+                    optind++;
+                    break;
+                }
                 req->options2 |= SUB2_MODIFY_RUN_JOB;
                 checkRLDelOption (LSF_RLIMIT_CPU, "cn");
                 if (req->rLimits[LSF_RLIMIT_CPU] != DEFAULT_RLIMIT)

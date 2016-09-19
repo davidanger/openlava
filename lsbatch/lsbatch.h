@@ -589,6 +589,7 @@ struct submit {
     char *userGroup;
     char *job_group; /* job group the job is attached to */
     char *job_description;
+    char *cwd;
 };
 
 struct submitReply {
