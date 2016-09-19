@@ -2,6 +2,8 @@ Release notes for OpenLava versions
 
 4.0beta1
 ========
+-- Fix mbatchd core dump that happens if jobs are submitted with -t option
+   of bsub and the job is terminated while pending.
 -- Added bjobs -o to support custom output fields
 -- Added bjobs -cwd to specify the job current working directory
 -- Implement MBD_DEDICATED_RESOURCES in lsf.conf. These are host based boolean

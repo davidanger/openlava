@@ -279,6 +279,7 @@ init_log(void)
      * EOF try the next record.
      */
     lsberrno = LSBE_NO_ERROR;
+    lineNum = 0;
     while (lsberrno != LSBE_EOF) {
 
         /* Use single purpose reading getc2() routine.

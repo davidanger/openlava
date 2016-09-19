@@ -4735,6 +4735,7 @@ scheduleAndDispatchJobs(void)
     hEnt *hashEntryPtr;
     struct jRef *jR;
     struct jData *jPtr;
+    struct jData *jPtr2;
     int count;
     bool_t has_ownership;
     int num_iter;
@@ -4798,7 +4799,13 @@ scheduleAndDispatchJobs(void)
 
             for (jPtr = jDataList[i]->back;
                  jPtr != jDataList[i];
-                 jPtr = jPtr->back) {
+                 jPtr = jPtr2) {
+
+                /* jPtr can be removed, for example if
+                 * the job is aborted because of -t
+                 * while checking if it is ready.
+                 */
+                jPtr2 = jPtr->back;
 
                 checkSlotReserve(&jPtr, &continueSched);
                 if (continueSched == FALSE) {
