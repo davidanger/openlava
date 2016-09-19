@@ -893,6 +893,7 @@ initParameterInfo(struct parameterInfo *param)
     param->hist_mins = -1;
     param->run_abs_limit = false;
     param->preempt_slot_suspend = false;
+    param->slot_decay_factor = DEF_SLOT_DECAY_FACTOR;
 }
 
 static void
