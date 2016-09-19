@@ -856,7 +856,14 @@ struct hostInfoEnt {
 #define DEF_MAX_JOBID   999999
 #define MAX_JOBID_LOW   999999
 #define MAX_JOBID_HIGH 9999999
+
+/* Maximum number of jobs to preempt per cycle
+ */
 #define DEF_MAX_PREEMPT_JOBS 12
+/* Slot decay factor. The accumulated lost usage
+ * is decayed every HIST_MINS by this number.
+ */
+#define DEF_SLOT_DECAY_FACTOR 10
 
 /* mbd control parameter
  */
@@ -904,6 +911,7 @@ struct parameterInfo {
     int run_abs_limit; /* if specificied -W is not scaled */
     char *preemptableResources; /* resource based queue preemption */
     bool_t preempt_slot_suspend;
+    int slot_decay_factor;
 };
 
 

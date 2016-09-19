@@ -1553,6 +1553,7 @@ checkParams(struct infoReq *req, struct parameterInfo *reply)
     else
         reply->preemptableResources = "";
     reply->preempt_slot_suspend = mbdParams->preempt_slot_suspend;
+    reply->slot_decay_factor = mbdParams->slot_decay_factor;
 }
 
 void

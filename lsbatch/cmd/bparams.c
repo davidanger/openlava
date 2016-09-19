@@ -221,4 +221,9 @@ The maximum number of finished jobs that can be stored in current events file:\n
         printf("    PREEMPT_SLOT_SUSPEND = yes\n\n");
     else
         printf("    PREEMPT_SLOT_SUSPEND = no\n\n");
+
+    if (reply->slot_decay_factor != DEF_SLOT_DECAY_FACTOR) {
+        printf("Slot decay factor:\n");
+        printf("    SLOT_DECAY_FACTOR = %d\n\n", reply->slot_decay_factor);
+    }
 }

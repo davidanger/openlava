@@ -395,11 +395,11 @@ fs_decay_ran_time(struct qData *qPtr)
         int numran;
 
         s = n->data;
-        /* We can the integer part so this will eventually
+        /* We take the integer part so this will eventually
          * drop to zero
          */
         numran = s->numRAN;
-        s->numRAN = s->numRAN/DECAY_FACTOR;
+        s->numRAN = s->numRAN/mbdParams->slot_decay_factor;
 
         if (logclass & LC_FAIR) {
             ls_syslog(LOG_INFO, "\
@@ -626,3 +626,36 @@ update_borrowed_slots(struct tree_node_ *n,
 
     return true;
 }
+
+#if 0
+/* get_tree_node()
+ */
+static struct tree_node_ *
+get_tree_node(struct hash_tab *node_tab,
+              struct jData *jPtr)
+{
+    char key[MAXLSFNAMELEN];
+
+    /* Do we know the group
+     */
+    if (jPtr->shared->jobBill.userGroup[0] != 0) {
+        sprintf(key, jPtr->shared->jobBill.userGroup);
+        n = hash_lookup(node_tab, key);
+        if (n)
+            return n;
+        n = add_node(node_tab, n, jPtr);
+        return n;
+    }
+
+    /* Do we know the user
+     */
+    sprintf(key, jPtr->userName);
+    n = hash_lookup(node_tab, key);
+    if (n)
+        return n;
+
+    if (hash_lookup(node_tab, "default")) {
+        n = add_node(node_tab, n, jPtr);
+    }
+}
+#endif

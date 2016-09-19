@@ -502,6 +502,9 @@ xdr_parameterInfo(XDR *xdrs,
     if (! xdr_int(xdrs, &paramInfo->preempt_slot_suspend))
         return false;
 
+    if (! xdr_int(xdrs, &paramInfo->slot_decay_factor))
+        return false;
+
     return true;
 }
 

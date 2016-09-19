@@ -429,7 +429,8 @@ do_Param(struct lsConf *conf, char *fname, int *lineNum)
         {"HIST_MINUTES", NULL, 0},          /* 40 */
         {"ABS_RUNLIMIT", NULL, 0},          /* 41 */
         {"PREEMPTABLE_RESOURCES", NULL, 0}, /* 42 */
-        {"PREEMPT_SLOT_SUSPEND", NULL, 0},      /* 43 */
+        {"PREEMPT_SLOT_SUSPEND", NULL, 0},  /* 43 */
+        {"SLOT_DECAY_FACTOR", NULL, 0},     /* 44 */
         {NULL, NULL, 0}
     };
 
@@ -668,6 +669,22 @@ do_Param(struct lsConf *conf, char *fname, int *lineNum)
                 pConf->param->preempt_slot_suspend = false;
                 if (strcasecmp(keylist[i].val, "y") == 0)
                     pConf->param->preempt_slot_suspend = true;
+            } else if (i == 44) {
+                /* SLOT_DECAY_FACTOR
+                 */
+                pConf->param->slot_decay_factor = DEF_SLOT_DECAY_FACTOR;
+                value = my_atoi(keylist[i].val, INFINIT_INT, 0);
+                if (value == INFINIT_INT) {
+                    ls_syslog(LOG_ERR, "\
+%s: File %s in section Parameters ending at line %d: Value <%s> of %s isn't a positive integer between 1 and %d; ignored", __func__, fname, *lineNum,
+                              keylist[i].val, keylist[i].key, INFINIT_INT - 1);
+
+                    pConf->param->slot_decay_factor = DEF_SLOT_DECAY_FACTOR;
+                    lsberrno = LSBE_CONF_WARNING;
+                } else {
+                    pConf->param->slot_decay_factor = value;
+                }
+
             } else if (i > 5) {
                 if (i < 23)
                     value = my_atoi(keylist[i].val, INFINIT_INT, 0);
