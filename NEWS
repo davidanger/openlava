@@ -1,8 +1,9 @@
 Release notes for OpenLava versions
 
-Master
-=======
+4.0beta2
+============
 
+-- lsid prints the 4.0beta2 identification for the current branch.
 -- Implement the decay slot factor for HIST_MINUTES.
 
 4.0beta1

@@ -9,9 +9,9 @@ AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_AUX_DIR([m4])
 
-AC_PREFIX_DEFAULT([/opt/openlava-master])
-AC_PREFIX_DEFAULT([/opt/openlava-master])
-AC_DEFINE(_OPENLAVA_PROJECT_, "OpenLava master", "Set project string in binaries.")
+AC_PREFIX_DEFAULT([/opt/openlava-4.0])
+AC_PREFIX_DEFAULT([/opt/openlava-4.0])
+AC_DEFINE(_OPENLAVA_PROJECT_, "OpenLava 4.0beta2", "Set project string in binaries.")
 AC_DEFINE(OPENLAVA_VERSION, 40, "Current openlava version.")
 #AC_DEFINE(REL_DATE, "Nov 11 2013", "Set the release date.")
 
