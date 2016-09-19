@@ -3,7 +3,7 @@ Release notes for OpenLava versions
 Master
 =======
 
--- Main branch is master.
+-- Implement the decay slot factor for HIST_MINUTES.
 
 4.0beta1
 ========
