@@ -718,8 +718,8 @@ displayCustom(struct jobInfoEnt *job, struct jobInfoHead *jInfoH,
             else if (job->numExHosts > 1) {
                 parsestr[0]='\0';
                 for (j = 0; j < hostList->listSize; j++) {
-                    sprintf(pidstr, "%d*%s", hostList->counter[i],
-                        hostList->names[i]);
+                    sprintf(pidstr, "%d*%s", hostList->counter[j],
+                        hostList->names[j]);
                     if (j != hostList->listSize-1)
                         strcat(pidstr, " ");
                     strcat(parsestr, pidstr);
