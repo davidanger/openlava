@@ -158,6 +158,7 @@ static void make_hsacct(struct hData *, char *, int);
 static bool_t check_ownership(struct qData *);
 static bool_t has_slot_preemption_;
 static void add_host_dedicated_res(struct hData *, struct hostInfo *);
+static void check_workdir_permissions();
 
 int
 minit(int mbdInitFlags)
@@ -360,6 +361,8 @@ minit(int mbdInitFlags)
     if (!lsb_CheckMode) {
         TIMEIT(0, init_log(), "init_log()");
     }
+    else
+        check_workdir_permissions();
 
     getMaxCpufactor();
 
@@ -4363,4 +4366,57 @@ add_host_dedicated_res(struct hData *hPtr, struct hostInfo *lsf)
         ent = h_addEnt_(hPtr->dres_tab, strdup(lsf->resources[cc]), NULL);
         ent->hData = strdup(lsf->resources[cc]);
     }
+}
+
+/* check_workdir_permissions()
+ */
+static void
+check_workdir_permissions(){
+    char dirbuf[MAXPATHLEN];
+    char infoDir[MAXPATHLEN];
+    struct stat sbuf;
+
+    sprintf(dirbuf, "%s/logdir", daemonParams[LSB_SHAREDIR].paramValue);
+
+    if (stat(dirbuf, &sbuf) < 0) {
+        ls_syslog(LOG_ERR, "%s: stat() on %s failed: %m", __func__, dirbuf);
+        lsb_CheckError = FATAL_ERR;
+        return;
+    }
+    if (sbuf.st_uid != managerId) {
+        ls_syslog(LOG_ERR, "\
+%s: Log directory %s not owned by OpenLava administrator: %s/%d (directory owner ID is %d)",
+            __func__,
+            dirbuf,
+            lsbManager,
+            managerId,
+            (int)sbuf.st_uid);
+        lsb_CheckError = FATAL_ERR;
+        return;
+    }
+    if (sbuf.st_mode & 02) {
+        ls_syslog(LOG_ERR, "\
+%s: Mode <%03o> not allowed for job log directory <%s>; the permission bits for others should be 05",
+                  __func__,
+                  (int)sbuf.st_mode,
+                  dirbuf);
+        lsb_CheckError = FATAL_ERR;
+        return;
+    }
+    sprintf(infoDir, "%s/logdir/info",
+            daemonParams[LSB_SHAREDIR].paramValue);
+    if (stat(infoDir, &sbuf) < 0)
+         return;
+    if (sbuf.st_uid != managerId) {
+        ls_syslog(LOG_ERR, "\
+%s: Info directory %s not owned by OpenLava administrator: %s/%d (directory owner ID is %d)",
+            __func__,
+            infoDir,
+            lsbManager,
+            managerId,
+            (int)sbuf.st_uid);
+        lsb_CheckError = FATAL_ERR;
+        return;
+    }
+    return;
 }
