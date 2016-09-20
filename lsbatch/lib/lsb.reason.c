@@ -344,7 +344,7 @@ lsb_pendreason(int numReasons, int *rsTb, struct jobInfoHead *jInfoH,
 
     if (!numReasons || !rsTb) {
         lsberrno = LSBE_BAD_ARG;
-        return ("");
+        return "System is unable to set pending reason for job;\n";
     }
     if (memSize < numReasons) {
         FREEUP (reasonTb);
