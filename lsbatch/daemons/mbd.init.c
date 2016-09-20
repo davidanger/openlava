@@ -158,7 +158,7 @@ static void make_hsacct(struct hData *, char *, int);
 static bool_t check_ownership(struct qData *);
 static bool_t has_slot_preemption_;
 static void add_host_dedicated_res(struct hData *, struct hostInfo *);
-static void check_workdir_permissions();
+static void check_workdir_permissions(void);
 
 int
 minit(int mbdInitFlags)
@@ -4371,7 +4371,8 @@ add_host_dedicated_res(struct hData *hPtr, struct hostInfo *lsf)
 /* check_workdir_permissions()
  */
 static void
-check_workdir_permissions(){
+check_workdir_permissions(void)
+{
     char dirbuf[MAXPATHLEN];
     char infoDir[MAXPATHLEN];
     struct stat sbuf;
@@ -4405,8 +4406,14 @@ check_workdir_permissions(){
     }
     sprintf(infoDir, "%s/logdir/info",
             daemonParams[LSB_SHAREDIR].paramValue);
-    if (stat(infoDir, &sbuf) < 0)
-         return;
+
+    if (stat(infoDir, &sbuf) < 0) {
+        ls_syslog(LOG_ERR, "\
+%s: stat() on %s failed: %m", __func__, infoDir);
+        lsb_CheckError = FATAL_ERR;
+        return;
+    }
+
     if (sbuf.st_uid != managerId) {
         ls_syslog(LOG_ERR, "\
 %s: Info directory %s not owned by OpenLava administrator: %s/%d (directory owner ID is %d)",
