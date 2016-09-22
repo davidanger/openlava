@@ -929,6 +929,7 @@ freeNewJob (struct jData *newjob)
     FREEUP (newjob->askedPtr);
     FREEUP (newjob->reqHistory);
     destroySharedRef(newjob->shared);
+    fin_link(newjob->preempted_hosts);
     FREEUP (newjob);
 }
 
@@ -6471,6 +6472,7 @@ freeJData(struct jData *jPtr)
     FREE_ALL_GRPS_CAND(jPtr);
 
     if (jPtr->numRef <= 0 ) {
+        fin_link(jPtr->preempted_hosts);
         FREEUP(jPtr);
     } else {
 
@@ -7892,6 +7894,7 @@ destroyjDataRef(struct jData *jp)
         if ((jp->jStatus & JOB_STAT_VOID) && (jp->numRef <= 0)) {
 
             voidJobList = listSetDel((long)jp, voidJobList);
+            fin_link(jp->preempted_hosts);    
             FREEUP(jp);
         }
     }

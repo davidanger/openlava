@@ -73,6 +73,7 @@ fin_link(link_t * head)
         head->num--;
 
     free(head);
+    head = NULL;
 }
 
 /* Just wrap the inLink() and call it push.

@@ -296,6 +296,7 @@ handleNewJobArray(struct jData *jarray,
             jPtr->nodeType = JGRP_NODE_JOB;
             jPtr->nextJob = NULL;
             jPtr->jobId = LSB_JOBID((LS_LONG_INT)jarray->jobId, i);
+            jPtr->preempted_hosts = make_link();
             addJobIdHT(jPtr);
             inPendJobList(jPtr, PJL, 0);
             if (userPending) {
