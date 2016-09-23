@@ -4,7 +4,8 @@ Release notes for OpenLava versions
 ============
 
 -- Implement a set of fixes related to fairshare job selection which were
-   causing the scheduler to slowly dispatch jobs even if slots were available.
+   causing the scheduler to slowly dispatch jobs even if slots were available
+   and set incomplete pending reasons.
 -- If the job group specified by -G at submission time is not part of
    the fairshare tree, then use the user name instead to dynamically create the
    fairshare user account.
