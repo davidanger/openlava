@@ -3,6 +3,8 @@ Release notes for OpenLava versions
 4.0beta2
 ============
 
+-- Fixed slot based and resource preemption job replay bug. Fixed slot based
+   preemption memory leak, and man pages.
 -- Implement a slot based queue preemption in which jobs are suspended,
    instead of requeued.
 -- If the MBD does not set the pending reasons for a job print:

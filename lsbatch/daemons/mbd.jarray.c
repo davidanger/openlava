@@ -185,14 +185,17 @@ copyJData(struct jData *jp)
     struct jData *jData;
     struct rqHistory *reqHistory;
     int          i;
+    link_t *preempted_hosts;
 
     jData = initJData(jp->shared);
+    preempted_hosts = jData->preempted_hosts;
 
     if (jData->jobSpoolDir) {
         FREEUP(jData->jobSpoolDir);
     }
     reqHistory = jData->reqHistory;
     memcpy((char *)jData, (char *)jp, sizeof(struct jData));
+    jData->preempted_hosts = preempted_hosts;
     jData->reqHistory = reqHistory;
     jData->numRef = 0;
     jData->nextJob = NULL;
@@ -296,7 +299,6 @@ handleNewJobArray(struct jData *jarray,
             jPtr->nodeType = JGRP_NODE_JOB;
             jPtr->nextJob = NULL;
             jPtr->jobId = LSB_JOBID((LS_LONG_INT)jarray->jobId, i);
-            jPtr->preempted_hosts = make_link();
             addJobIdHT(jPtr);
             inPendJobList(jPtr, PJL, 0);
             if (userPending) {
