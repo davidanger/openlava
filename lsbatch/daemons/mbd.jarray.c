@@ -257,6 +257,10 @@ handleNewJobArray(struct jData *jarray,
     int i;
     int userPending = 0;
 
+    if (logclass & LC_SCHED)
+        ls_syslog(LOG_INFO, "\
+%s: Entering this routine job %s", __func__, lsb_jobid2str(jarray->jobId));
+
     addJobIdHT(jarray);
     jarray->nodeType = JGRP_NODE_ARRAY;
     jarray->nextJob = NULL;

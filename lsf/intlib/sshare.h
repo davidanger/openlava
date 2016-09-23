@@ -37,6 +37,7 @@ struct share_acct {
     uint32_t shares;  /* shares as configured */
     double dshares;   /* computed shares with siblings */
     uint32_t sent;    /* number of jobs to sent by this acct */
+    uint32_t avail;   /* available per distribution cycle */
     int numPEND;      /* number of pending jobs */
     int numRUN;       /* number of running jobs */
     int numRAN;       /* number of jobs the account ran */

@@ -212,6 +212,10 @@ dalsi:
         s = n->data;
         if (s->sent > 0) {
             ++sent;
+            /* This counter is decreased: s->sent--
+             * only when the job gets started in
+             * fs_update_sacct().
+             */
             break;
         }
     }
@@ -225,11 +229,13 @@ dalsi:
     if (logclass & LC_FAIR) {
         ls_syslog(LOG_INFO, "\
 %s: account %s num slots %d options 0x%x queue %s", __func__, s->name,
-                  s->sent, s->options, qPtr->queue);
+                  s->sent + 1, s->options, qPtr->queue);
     }
 
     /* Get the uData that is going to dispatch the
-     * job
+     * job. There is only one uData for a user regardless
+     * of the number of share accounts so all user jobs
+     * are in uPtr->jobs
      */
     ent = h_getEnt_(&uDataList, s->name);
     if (ent == NULL) {
@@ -302,11 +308,14 @@ dalsi:
         }
     }
 
-    /* Disable the bulk distribution and get one
-     * job from each leaf in priority order.
+    /* Push it back if there are still some pending jobs,
+     * after dispatch the tree will be sorted again so next
+     * time we will eventually pick another sacct.
+     * Note that if the job does not get dispatched and
+     * we did not push back the account we lose all sent
+     * slots in this scheduling cycle.
      */
-    if (0)
-        push_link(l, n);
+    push_link(l, n);
 
     *jRef = jref;
 
@@ -423,11 +432,24 @@ get_user_node(struct hash_tab *node_tab,
     uint32_t sum;
     char key[MAXLSFNAMELEN];;
     char wants_group;
+    char ugroup[MAXLSFNAMELEN];
+
+    /* jobBill coming from xdr so all strings must be >= 0
+     */
+    strcpy(ugroup, jPtr->shared->jobBill.userGroup);
+
+    /* If we don't know this -G group ignore it
+     * and just use the user. They should have
+     * default configured in this case.
+     */
+    n = hash_lookup(node_tab, ugroup);
+    if (n == NULL) {
+        ugroup[0] = 0;
+    }
 
     wants_group = 0;
-    if (jPtr->shared->jobBill.userGroup[0] != 0) {
-        sprintf(key, "\
-%s/%s", jPtr->shared->jobBill.userGroup, jPtr->userName);
+    if (ugroup[0] != 0) {
+        sprintf(key, "%s/%s", ugroup, jPtr->userName);
         wants_group = 1;
         /* when picking up the job remember this
          * share accounts wants a specific group.
@@ -451,19 +473,22 @@ get_user_node(struct hash_tab *node_tab,
     /* If job specifies parent group lookup
      * all in parent group
      */
-    if (jPtr->shared->jobBill.userGroup[0] != 0) {
-        sprintf(key, "%s/all", jPtr->shared->jobBill.userGroup);
+    if (ugroup[0] != 0) {
+        sprintf(key, "%s/all", ugroup);
         n = hash_lookup(node_tab, key);
     } else {
         /* Job specifies no parent group
-         * so lookup all in any group
+         * so lookup default.
+         *
          */
-        n = hash_lookup(node_tab, "all");
-        if (n == NULL)
-            n = hash_lookup(node_tab, "default");
+        if (0) {
+            n = hash_lookup(node_tab, "all");
+            if (n == NULL);
+        }
+        n = hash_lookup(node_tab, "default");
     }
 
-    /* No user, no all, no hope...
+    /* No user, no default, no hope...
      */
     if (n == NULL)
         return NULL;

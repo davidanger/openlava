@@ -465,9 +465,11 @@ updQaccount(struct jData *jp, int numJobs, int numPEND,
     int numSlots;
     int newJob;
 
-    if (logclass & LC_JLIMIT)
-        ls_syslog(LOG_DEBUG1, "%s: Entering with job=%s queue=%s numJobs=%d numPEND=%d numRUN=%d numSSUSP=%d numUSUSP=%d numRESERVE=%d", fname, lsb_jobid2str(jp->jobId), qp->queue, numJobs, numPEND, numRUN, numSSUSP, numUSUSP, numRESERVE);
-
+    if (logclass & LC_SCHED)
+        ls_syslog(LOG_INFO, "\
+%s: Entering job %s queue %s numJobs %d numPEND %d numRUN %d numSSUSP %d\
+ numUSUSP %d numRESERVE %d", __func__, lsb_jobid2str(jp->jobId), qp->queue,
+                  numJobs, numPEND, numRUN, numSSUSP, numUSUSP, numRESERVE);
 
     addValue (&qp->numJobs, numJobs, jp, fname, "numJobs");
     addValue (&qp->numPEND, numPEND, jp, fname, "numPEND");
@@ -625,6 +627,12 @@ updLimitSlotData(struct jData *jp, int numJobs, int numPEND,
     if (qp == NULL || uq == NULL)
         return;
 
+    if (logclass & LC_SCHED)
+        ls_syslog(LOG_INFO, "\
+%s: Entering job %s queue %s numJobs %d numPEND %d numRUN %d numSSUSP %d\
+ numUSUSP %d numRESERVE %d", __func__, lsb_jobid2str(jp->jobId), qp->queue,
+                  numJobs, numPEND, numRUN, numSSUSP, numUSUSP, numRESERVE);
+
     if (logclass & LC_JLIMIT)
         ls_syslog(LOG_DEBUG1,
 "%s: Entering with job=%s project=%s user=%s queue=%s numJobs=%d numPEND=%d numRUN=%d numSSUSP=%d numUSUSP=%d numRESERVE=%d",
@@ -698,6 +706,12 @@ updLimitJobData(struct jData *jp, int numJobs, int numPEND,
 
     if (qp == NULL || uq == NULL)
         return;
+
+    if (logclass & LC_SCHED)
+        ls_syslog(LOG_INFO, "\
+%s: Entering job %s queue %s numJobs %d numPEND %d numRUN %d numSSUSP %d\
+ numUSUSP %d numRESERVE %d", __func__, lsb_jobid2str(jp->jobId), qp->queue,
+                  numJobs, numPEND, numRUN, numSSUSP, numUSUSP, numRESERVE);
 
     if (logclass & LC_JLIMIT)
         ls_syslog(LOG_DEBUG1,
@@ -1048,6 +1062,13 @@ updUserData (struct jData *jData, int numJobs, int numPEND,
     static struct uData **grpPtr = NULL;
     int i, numSlots, numNew;
     int newJob;
+
+    if (logclass & LC_SCHED)
+        ls_syslog(LOG_INFO, "\
+%s: Entering job %s queue %s numJobs %d numPEND %d numRUN %d numSSUSP %d\
+ numUSUSP %d numRESERVE %d", __func__, lsb_jobid2str(jData->jobId),
+                  jData->qPtr->queue,
+                  numJobs, numPEND, numRUN, numSSUSP, numUSUSP, numRESERVE);
 
     if (grpPtr == NULL && numofugroups > 0) {
         grpPtr = (struct uData **) my_calloc(numofugroups,
