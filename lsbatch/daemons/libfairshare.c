@@ -432,24 +432,11 @@ get_user_node(struct hash_tab *node_tab,
     uint32_t sum;
     char key[MAXLSFNAMELEN];;
     char wants_group;
-    char ugroup[MAXLSFNAMELEN];
-
-    /* jobBill coming from xdr so all strings must be >= 0
-     */
-    strcpy(ugroup, jPtr->shared->jobBill.userGroup);
-
-    /* If we don't know this -G group ignore it
-     * and just use the user. They should have
-     * default configured in this case.
-     */
-    n = hash_lookup(node_tab, ugroup);
-    if (n == NULL) {
-        ugroup[0] = 0;
-    }
 
     wants_group = 0;
-    if (ugroup[0] != 0) {
-        sprintf(key, "%s/%s", ugroup, jPtr->userName);
+    if (jPtr->shared->jobBill.userGroup[0] != 0) {
+        sprintf(key, "\
+%s/%s", jPtr->shared->jobBill.userGroup, jPtr->userName);
         wants_group = 1;
         /* when picking up the job remember this
          * share accounts wants a specific group.
@@ -473,22 +460,19 @@ get_user_node(struct hash_tab *node_tab,
     /* If job specifies parent group lookup
      * all in parent group
      */
-    if (ugroup[0] != 0) {
-        sprintf(key, "%s/all", ugroup);
+    if (jPtr->shared->jobBill.userGroup[0] != 0) {
+        sprintf(key, "%s/all", jPtr->shared->jobBill.userGroup);
         n = hash_lookup(node_tab, key);
     } else {
         /* Job specifies no parent group
-         * so lookup default.
-         *
+         * so lookup all in any group
          */
-        if (0) {
-            n = hash_lookup(node_tab, "all");
-            if (n == NULL);
-        }
-        n = hash_lookup(node_tab, "default");
+        n = hash_lookup(node_tab, "all");
+        if (n == NULL)
+            n = hash_lookup(node_tab, "default");
     }
 
-    /* No user, no default, no hope...
+    /* No user, no all, no hope...
      */
     if (n == NULL)
         return NULL;
