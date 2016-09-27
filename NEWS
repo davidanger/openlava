@@ -3,6 +3,8 @@ Release notes for OpenLava versions
 4.0beta2
 ============
 
+-- In the fairshare scheduling if a user has jobs that enforce a user group
+   and jobs that don't, schedule both types of jobs with -G jobs first.
 -- Implement a set of fixes related to fairshare job selection which were
    causing the scheduler to slowly dispatch jobs even if slots were available
    and set incomplete pending reasons.

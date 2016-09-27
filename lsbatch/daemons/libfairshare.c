@@ -284,6 +284,36 @@ dalsi:
         }
     }
 
+    if (s->options & SACCT_WANTS_GROUP
+        && found == false) {
+        count = 0;
+        jref = NULL;
+        jPtr = NULL;
+
+        for (dl = uPtr->jobs->back;
+             dl != uPtr->jobs;
+             dl = dl->back) {
+            ++count;
+
+            jref = dl->e;
+            jPtr = jref->job;
+
+            if (jPtr->qPtr == qPtr
+                && jPtr->shared->jobBill.userGroup[0] == 0) {
+
+                if (logclass & LC_FAIR) {
+                    ls_syslog(LOG_INFO, "\
+%s: found job %s not enforcing group %s", __func__, lsb_jobid2str(jPtr->jobId),
+                              n->parent->name);
+                }
+
+                dlink_rm_ent(uPtr->jobs, dl);
+                found = true;
+                break;
+            }
+        }
+    }
+
     if (jPtr == NULL
         || found == false) {
         /* This happens if MBD_MAX_JOBS_SCHED
@@ -430,7 +460,7 @@ get_user_node(struct hash_tab *node_tab,
     struct share_acct *sacct;
     struct share_acct *sacct2;
     uint32_t sum;
-    char key[MAXLSFNAMELEN];;
+    char key[MAXLSFNAMELEN];
     char wants_group;
 
     wants_group = 0;
