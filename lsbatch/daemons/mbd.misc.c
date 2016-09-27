@@ -1379,11 +1379,6 @@ checkUsers (struct infoReq *req, struct userInfoReply *reply)
             uData = (struct uData *) hashEntryPtr->hData;
 
 
-            if (uData->flags & USER_OTHERS) {
-                hashEntryPtr = h_nextEnt_(&hashSearchPtr);
-                continue;
-            }
-
             uInfo = &(reply->users[reply->numUsers]);
             uInfo->user = uData->user;
             if (uData->pJobLimit >= INFINIT_FLOAT)

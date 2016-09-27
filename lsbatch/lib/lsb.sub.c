@@ -363,6 +363,13 @@ getCommonParams(struct submit  *jobSubReq,
 	submitReq->userGroup = jobSubReq->userGroup;
     }
 
+    if (lsbParams[LSB_DEFAULT_USER_GROUP].paramValue
+        && !(jobSubReq->options & SUB_USER_GROUP)) {
+        jobSubReq->options |= SUB_USER_GROUP;
+        jobSubReq->userGroup = lsbParams[LSB_DEFAULT_USER_GROUP].paramValue;
+        submitReq->userGroup = jobSubReq->userGroup;
+    }
+
     submitReq->submitTime = time(NULL);
 
     if (jobSubReq->options2 & SUB2_JOB_PRIORITY) {

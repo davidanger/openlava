@@ -56,6 +56,8 @@ extern int sig_encode(int);
 #define DEFAULT_API_CONNTIMEOUT 10
 #define DEFAULT_API_RECVTIMEOUT 0
 
+/* The config_param array is defined in lsb.init.c
+ */
 #define LSB_DEBUG         0
 #define LSB_SHAREDIR      1
 #define LSB_SBD_PORT      2
@@ -71,9 +73,8 @@ extern int sig_encode(int);
 #define LSB_SHORT_HOSTLIST 13
 #define LSB_INTERACTIVE_STDERR 14
 #define LSB_32_PAREN_ESC     15
-
-#define LSB_API_QUOTE_CMD     14
-
+#define LSB_API_QUOTE_CMD    16
+#define LSB_DEFAULT_USER_GROUP 17
 
 typedef struct lsbSubSpoolFile {
     char inFileSpool[MAXFILENAMELEN];

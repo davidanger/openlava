@@ -19,6 +19,9 @@
 
 #include "lsb.h"
 
+/* Note that the order of these is significant; #defines of indexes into
+ * this array exist in lsb.h
+ */
 struct config_param lsbParams[] = {
      {"LSB_DEBUG", NULL},
      {"LSB_SHAREDIR", NULL},
@@ -37,6 +40,7 @@ struct config_param lsbParams[] = {
      {"LSF_INTERACTIVE_STDERR", NULL},
      {"LSB_32_PAREN_ESC", NULL},
      {"LSB_API_QUOTE_CMD", NULL},
+     {"LSB_DEFAULT_USER_GROUP", NULL},
      {NULL, NULL}
 };
 
