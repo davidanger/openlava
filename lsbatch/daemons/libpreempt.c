@@ -396,11 +396,21 @@ is_preemptable_resource(const char *res)
 static bool_t
 is_pend_for_slot(struct jData *jPtr)
 {
+    int cc;
+    int reason;
+
     /* mbatchd preempts for slots
      */
-    if (!(jPtr->jStatus & JOB_STAT_PEND
-          && jPtr->newReason == 0)) {
+    if (!jPtr->jStatus & JOB_STAT_PEND)
         return false;
+
+    if (jPtr->newReason > 0)
+        return false;
+
+    for (cc = 0; cc < jPtr->numReasons; cc++) {
+        GET_LOW(reason, jPtr->reasonTb[cc]);
+        if (reason != PEND_HOST_JOB_LIMIT)
+            return false;
     }
 
     return true;
