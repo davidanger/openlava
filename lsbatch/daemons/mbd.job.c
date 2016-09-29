@@ -3426,6 +3426,7 @@ handleFinishJob(struct jData *jData, int oldStatus, int eventTime)
         changeJobParams (jData);
     }
 
+    handle_finished_tokens(jData);
 }
 
 void

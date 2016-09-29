@@ -1,13 +1,23 @@
 Release notes for OpenLava versions
 
-3.3.3
-=====
+license_broker
+==============
 
+-- Implement asynchronous returning of licenses if the cluster is
+   under recall. In this way as soon as a job is finished the free
+   tokens are sent to the glb.
+-- Implement multiple licenses managed by the Global License Broker and
+   consumed by MBD.
+-- Implement asynchronous resumption of jobs after they being preempted.
+-- Do not resume license jobs if higher priority queues have pending jobs
+   which could potentially use licenses.
 -- Implement bsub -Jd to support specifying job description to jobs.
 -- Implement tech preview of lsb.resources.
 -- Implement the bresource command and the lsb_getlimits() API.
 -- Fix scheduler bug in which the priority tree was not sorted
    after each job was dispatched.
+3.3.3
+=====
 -- Do not perform bulk slot allocation in the fairshare scheduler
    but distribute slots from higher to low priority jobs.
 -- Implement periodic decay of used slots in the fairshare tree.
@@ -20,11 +30,6 @@ Release notes for OpenLava versions
 -- Fix the Makefile.am to install bgmod.1 and bjdep.1 man pages.
 -- Fix memory leak in bsub -Jd implementation.
 -- Modify 'bqueues -l' to print queue attribute preemptable.
--- Implement multiple licenses managed by the Global License Broker and
-   consumed by MBD.
--- Implement asynchronous resumption of jobs after they being preempted.
--- Do not resume license jobs if higher pirority queues have pending jobs
-   which could potentially use licenses.
 
 3.3.2
 ======

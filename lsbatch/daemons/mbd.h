@@ -1543,7 +1543,7 @@ extern int encode_glb_tokens(XDR *, struct LSFHeader *);
 extern int count_stream(char *);
 struct mbd_token *recover_glb_allocation_state(void);
 extern bool_t jobgroup_limit_ok(struct jData *);
-
 extern int do_resLimitInfo(XDR *, int, struct sockaddr_in *, struct LSFHeader *);
+extern void handle_finished_tokens(struct jData *);
 
 #endif /* _MBD_HEADER_ */

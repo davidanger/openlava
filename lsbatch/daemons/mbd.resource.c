@@ -823,12 +823,11 @@ copy_glb_tokens(struct glb_token *t, int num)
     tokens = calloc(num, sizeof(struct mbd_token));
 
     for (cc = 0; cc < num; cc++) {
+
         tokens[cc].name = strdup(t[cc].name);
         tokens[cc].allocated = t[cc].allocated;
         tokens[cc].ideal = t[cc].ideal;
         tokens[cc].recalled = t[cc].recalled;
-        /* remaining mbd_token members are zero
-         */
     }
 }
 
@@ -1006,6 +1005,47 @@ need_tokens(const char *name)
     t->need_more++;
 }
 
+void
+handle_finished_tokens(struct jData *jPtr)
+{
+    int cc;
+    float x;
+    struct resVal *r;
+
+    /* Try the host and then the queue
+     */
+    r = jPtr->shared->resValPtr;
+    if (r == NULL)
+        r = jPtr->qPtr->resValPtr;
+    if (r == NULL)
+        return;
+
+    x = 0.0;
+    for (cc = 0; cc < num_tokens; cc++) {
+
+        if (tokens[cc].recalled <= 0)
+            continue;
+
+        x = get_job_tokens(r, &tokens[cc], jPtr);
+        if (x > 0) {
+            int recalled;
+
+            if (x >= tokens[cc].recalled) {
+                recalled = tokens[cc].recalled;
+                tokens[cc].recalled = 0;
+            } else {
+                recalled = x;
+                tokens[cc].recalled = tokens[cc].recalled - x;
+            }
+
+            ls_syslog(LOG_INFO, "\
+%s: job %s finished using token %s num %d", __func__,
+                      lsb_jobid2str(jPtr->jobId), tokens[cc]. name, x);
+            glb_release_tokens(&tokens[cc], recalled);
+        }
+    }
+}
+
 static int
 compute_used_tokens(struct mbd_token *t)
 {
@@ -1089,6 +1129,9 @@ get_job_tokens(struct resVal *resPtr, struct mbd_token *t, struct jData *jPtr)
 
             if (strcmp(allLsInfo->resTable[cc].name, t->name) != 0)
                 continue;
+
+            if (IS_FINISH(jPtr->jStatus))
+                return r2.val[cc];
 
             /* Ok the job was started on a GLB token but it
              * has been suspended by MBD because of token recall
