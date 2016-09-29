@@ -1064,6 +1064,15 @@ xdr_queueInfoEnt(XDR *xdrs,
     if (! xdr_int(xdrs, &qInfo->loan_duration))
         return false;
 
+    /* 4.0 adds the numUSUSP and numSSUSP counters
+     * to share accounts.
+     */
+    for (i = 0; i < qInfo->numAccts; i++) {
+        if (! xdr_int(xdrs, &qInfo->saccts[i]->numUSUSP)
+            || ! xdr_int(xdrs, &qInfo->saccts[i]->numSSUSP))
+            return false;
+    }
+
     return true;
 }
 

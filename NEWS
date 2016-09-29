@@ -3,6 +3,9 @@ Release notes for OpenLava versions
 4.0beta2
 ============
 
+-- Introduce USUSP and SSUSP counters in the fairshare accounts. Previously
+   suspended jobs were accounted as running leading to erroneous state
+   transition from suspended to pending state.
 -- Implement a new lsf.conf variable named LSB_DEFAULT_USER_GROUP="group name".
    If this variable is specified than jobs that do not specify -G at submission
    time will be assigned LSB_DEFAULT_USER_GROUP as group. This group must be

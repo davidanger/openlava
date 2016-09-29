@@ -63,13 +63,6 @@ fs_update_sacct(struct qData *qPtr,
     struct share_acct *sacct;
     int numRAN;
 
-    /* Suspended jobs are still running so we
-     * ignore their state transition.
-     */
-    if (numUSUSP != 0
-        || numSSUSP != 0)
-        return 0;
-
     t = NULL;
     if (qPtr->fsSched)
         t = qPtr->fsSched->tree;
@@ -116,6 +109,9 @@ fs_update_sacct(struct qData *qPtr,
         sacct->numPEND = sacct->numPEND + numPEND;
         sacct->numRUN = sacct->numRUN + numRUN;
         sacct->numRAN = sacct->numRAN + numRAN;
+        sacct->numUSUSP = sacct->numUSUSP + numUSUSP;
+        sacct->numSSUSP = sacct->numSSUSP + numSSUSP;
+
         if (logclass & LC_FAIR) {
             ls_syslog(LOG_INFO, "\
 %s: 2 updating %s pend %d run ran %d %d ususp %d ssusp %d", __func__,

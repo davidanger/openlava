@@ -42,6 +42,8 @@ struct share_acct {
     int numRUN;       /* number of running jobs */
     int numRAN;       /* number of jobs the account ran */
     int numBORROWED;  /* number of slots the account is borrowing */
+    int numUSUSP;     /* number of user suspended jobs */
+    int numSSUSP;     /* number of system suspended jobs */
     int32_t dsrv2;    /* slot the account deserve based on ran */
     uint32_t options; /* SACCT_USER | SACCT_GROUP | SACCT_USER_ALL ... */
 };
