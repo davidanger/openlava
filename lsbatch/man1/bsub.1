@@ -909,6 +909,10 @@ of the task.
 section indicates if a parallel job should span
 across multiple hosts.
 .IP
+* A CPU and memory affinity resource section (affinity).
+The affinity section specifies CPU and memory binding requirements
+for a job.
+.IP
 The resource requirement string sections have the following syntax:
 .IP
 select[selection_string] order[order_string] 
@@ -916,6 +920,8 @@ select[selection_string] order[order_string]
 rusage[usage_string [, usage_string]
 .br
 [|| usage_string] ...] span[span_string]
+.br
+affinity[affinity_string]
 .IP
 The square brackets must be typed as shown for each section. 
 A blank space must separate each resource requirement section.
@@ -1054,6 +1060,22 @@ or 20 MB of memory and 50 MB of swap space for
 bsub -R "rusage[mem=20:app_lic_v15=1||
 .br
 mem=20:swp=50:app_lic_v201=1]" mjob
+.IP
+Examples of using affinity resource requirement:
+.IP
+bsub -R "rusage[mem=4734] span[hosts=1] affinity[core(1):cpubind=core]" myjob
+.IP
+Openlava will bind the job myjob to a core.
+.IP
+bsub -R "affinity[core(1,exclusive=(core,alljobs)):cpubind=core:membind=localonly:distribute=pack]" my job
+.IP
+Openlava will allocate a core exclusively to this job, i.e.
+the core will not be shared with another job. The local memory attached to the core is used,
+and the cores are selected such that they are “packed” onto as few sockets as possible.
+.IP
+SBD_BIND_CPU=y needs to be set in lsf.conf in order to use the affinity feature.
+.IP
+*Note: OpenLava currently only supports affinity strings in above two examples.
 .IP
 When a multi-threaded or parallel job that needs to run on one machine (“span[hosts=1]”)
 specifies the memory usage using “–R rusage[mem=...]” , the memory usage requirement
