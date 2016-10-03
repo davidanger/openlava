@@ -3,6 +3,7 @@ Release notes for OpenLava versions
 4.0beta2
 ============
 
+-- Fixed rusage string parsing bug
 -- Introduce USUSP and SSUSP counters in the fairshare accounts. Previously
    suspended jobs were accounted as running leading to erroneous state
    transition from suspended to pending state.
