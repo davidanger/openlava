@@ -1418,7 +1418,7 @@ strip_spaces(const char *str)
 {
     char *s;
     int l;
-    int cc;
+    int cc, sc;
 
     if (str == NULL)
         return NULL;
@@ -1426,14 +1426,15 @@ strip_spaces(const char *str)
     l = strlen(str);
     s = calloc(l + 1, sizeof(char));
 
-    for (cc = 0; cc < l; cc++) {
+    for (cc = 0, sc = 0; cc < l; cc++) {
         if (str[cc] == ' '
             || str[cc] == '\t') {
-            ++cc;
             continue;
         }
-        s[cc] = str[cc];
+        s[sc] = str[cc];
+        sc++;
     }
+    s[sc] = '\0';
 
     return s;
 }

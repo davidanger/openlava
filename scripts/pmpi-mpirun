@@ -1,0 +1,34 @@
+#!/bin/sh
+#
+#  Copyright (c) 2016 Teraproc Inc.
+#  Copyright (c) 2007 Platform Computing
+#
+# This script is a wrapper for Platform MPI mpirun
+# it generates the machine file based on the hosts
+# given to it by OpenLava.
+#
+
+MPIRUN=`which mpirun`
+
+if [ x"${LSB_JOBFILENAME}" = x -o x"${LSB_HOSTS}" = x ]; then
+    ${MPIRUN} $*
+    exit $?
+fi
+
+MYARGS=$*
+WORKDIR=`dirname ${LSB_JOBFILENAME}`
+MACHFILE=${WORKDIR}/mpi_machines.${LSB_JOBID}
+
+T=`echo "${MYARGS}" | grep -- -machinefile |wc -l`
+if [ $T -gt 0 ]; then
+    echo "Error:  Do not provide the machinefile for mpirun."
+    echo "        It is generated automatically for you."
+    exit -3
+fi
+
+# Make the Open MPI machine file
+echo "${LSB_HOSTS}" | tr '\/ ' '\r\n' > ${MACHFILE}
+
+${MPIRUN} -machinefile ${MACHFILE} ${MYARGS}
+
+exit $?

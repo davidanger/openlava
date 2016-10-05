@@ -987,7 +987,6 @@ extern int                     numLIMhosts;
 extern float                   maxCpuFactor;
 extern int                     freedSomeReserveSlot;
 
-extern long                    schedSeqNo;
 extern struct switch_child     *swchild;
 
 extern struct resLimitConf     *limitConf;
@@ -1494,7 +1493,6 @@ extern void                 freeIdxListContext(void);
 #define IS_CHILD(x,y)    is_child(x,y)
 #define IS_SIBLING(x,y)  ((PARENT(x) == PARENT(y))? TRUE:FALSE)
 
-extern long   schedSeqNo;
 #include "proxy.h"
 
 #define QUEUE_LIMIT(qPtr, i) \

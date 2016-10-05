@@ -63,13 +63,6 @@ fs_update_sacct(struct qData *qPtr,
     struct share_acct *sacct;
     int numRAN;
 
-    /* Suspended jobs are still running so we
-     * ignore their state transition.
-     */
-    if (numUSUSP != 0
-        || numSSUSP != 0)
-        return 0;
-
     t = NULL;
     if (qPtr->fsSched)
         t = qPtr->fsSched->tree;
@@ -116,6 +109,9 @@ fs_update_sacct(struct qData *qPtr,
         sacct->numPEND = sacct->numPEND + numPEND;
         sacct->numRUN = sacct->numRUN + numRUN;
         sacct->numRAN = sacct->numRAN + numRAN;
+        sacct->numUSUSP = sacct->numUSUSP + numUSUSP;
+        sacct->numSSUSP = sacct->numSSUSP + numSSUSP;
+
         if (logclass & LC_FAIR) {
             ls_syslog(LOG_INFO, "\
 %s: 2 updating %s pend %d run ran %d %d ususp %d ssusp %d", __func__,
@@ -212,6 +208,10 @@ dalsi:
         s = n->data;
         if (s->sent > 0) {
             ++sent;
+            /* This counter is decreased: s->sent--
+             * only when the job gets started in
+             * fs_update_sacct().
+             */
             break;
         }
     }
@@ -225,11 +225,13 @@ dalsi:
     if (logclass & LC_FAIR) {
         ls_syslog(LOG_INFO, "\
 %s: account %s num slots %d options 0x%x queue %s", __func__, s->name,
-                  s->sent, s->options, qPtr->queue);
+                  s->sent + 1, s->options, qPtr->queue);
     }
 
     /* Get the uData that is going to dispatch the
-     * job
+     * job. There is only one uData for a user regardless
+     * of the number of share accounts so all user jobs
+     * are in uPtr->jobs
      */
     ent = h_getEnt_(&uDataList, s->name);
     if (ent == NULL) {
@@ -278,6 +280,36 @@ dalsi:
         }
     }
 
+    if (s->options & SACCT_WANTS_GROUP
+        && found == false) {
+        count = 0;
+        jref = NULL;
+        jPtr = NULL;
+
+        for (dl = uPtr->jobs->back;
+             dl != uPtr->jobs;
+             dl = dl->back) {
+            ++count;
+
+            jref = dl->e;
+            jPtr = jref->job;
+
+            if (jPtr->qPtr == qPtr
+                && jPtr->shared->jobBill.userGroup[0] == 0) {
+
+                if (logclass & LC_FAIR) {
+                    ls_syslog(LOG_INFO, "\
+%s: found job %s not enforcing group %s", __func__, lsb_jobid2str(jPtr->jobId),
+                              n->parent->name);
+                }
+
+                dlink_rm_ent(uPtr->jobs, dl);
+                found = true;
+                break;
+            }
+        }
+    }
+
     if (jPtr == NULL
         || found == false) {
         /* This happens if MBD_MAX_JOBS_SCHED
@@ -302,11 +334,14 @@ dalsi:
         }
     }
 
-    /* Disable the bulk distribution and get one
-     * job from each leaf in priority order.
+    /* Push it back if there are still some pending jobs,
+     * after dispatch the tree will be sorted again so next
+     * time we will eventually pick another sacct.
+     * Note that if the job does not get dispatched and
+     * we did not push back the account we lose all sent
+     * slots in this scheduling cycle.
      */
-    if (0)
-        push_link(l, n);
+    push_link(l, n);
 
     *jRef = jref;
 
@@ -421,7 +456,7 @@ get_user_node(struct hash_tab *node_tab,
     struct share_acct *sacct;
     struct share_acct *sacct2;
     uint32_t sum;
-    char key[MAXLSFNAMELEN];;
+    char key[MAXLSFNAMELEN];
     char wants_group;
 
     wants_group = 0;

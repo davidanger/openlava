@@ -1128,6 +1128,10 @@ requirements perspective and must be able to dispatch jobs to the same hosts.
 The preemption algorithm searches the list of preemptable jobs determining the
 job that has run for the least time, and then terminates and re-queues the
 preempted job.
+
+Preemption can be configured based on resources or job slots in lsb.params.
+Please refer to the parameters PREEMPTABLE_RESOURCES and PREEMPT_SLOT_SUSPEND
+in lsb.params for details.
 .SS Default
 .BR
 .PP

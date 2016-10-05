@@ -66,7 +66,7 @@ do_submitReq(XDR *xdrs,
     static struct submitReq subReq;
     int reply;
 
-    if (logclass & (LC_TRACE | LC_EXEC | LC_COMM))
+    if (logclass & (LC_TRACE | LC_EXEC | LC_COMM| LC_SCHED))
         ls_syslog(LOG_DEBUG, "\
 %s: Entering this routine...; host %s, socket %d",
                   __func__, hostName, chanSock_(chfd));

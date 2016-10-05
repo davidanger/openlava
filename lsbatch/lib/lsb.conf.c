@@ -893,6 +893,7 @@ initParameterInfo(struct parameterInfo *param)
     param->hist_mins = -1;
     param->run_abs_limit = false;
     param->preempt_slot_suspend = false;
+    param->slot_decay_factor = DEF_SLOT_DECAY_FACTOR;
 }
 
 static void
@@ -1453,9 +1454,8 @@ do_Groups(struct groupInfoEnt **groups, struct lsConf *conf, char *fname,
             }
 
             if (strcmp (keylist[0].val, "all") == 0
-                || strcmp (keylist[0].val, "default") == 0
-                || strcmp (keylist[0].val, "others") == 0) {
-                ls_syslog(LOG_WARNING, _i18n_msg_get(ls_catd , NL_SETN, 5103, "%s: File %s at line %d: Group name <%s> conflicts with reserved word <all/default/others>; ignoring line"),  /* catgets 5103 */
+                || strcmp (keylist[0].val, "default") == 0) {
+                ls_syslog(LOG_WARNING, _i18n_msg_get(ls_catd , NL_SETN, 5103, "%s: File %s at line %d: Group name <%s> conflicts with reserved word <all/default>; ignoring line"),  /* catgets 5103 */
                           __func__, fname, *lineNum, keylist[0].val);
                 lsberrno = LSBE_CONF_WARNING;
                 continue;

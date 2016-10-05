@@ -37,10 +37,13 @@ struct share_acct {
     uint32_t shares;  /* shares as configured */
     double dshares;   /* computed shares with siblings */
     uint32_t sent;    /* number of jobs to sent by this acct */
+    uint32_t avail;   /* available per distribution cycle */
     int numPEND;      /* number of pending jobs */
     int numRUN;       /* number of running jobs */
     int numRAN;       /* number of jobs the account ran */
     int numBORROWED;  /* number of slots the account is borrowing */
+    int numUSUSP;     /* number of user suspended jobs */
+    int numSSUSP;     /* number of system suspended jobs */
     int32_t dsrv2;    /* slot the account deserve based on ran */
     uint32_t options; /* SACCT_USER | SACCT_GROUP | SACCT_USER_ALL ... */
 };

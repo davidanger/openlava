@@ -45,6 +45,8 @@ static void sort_tree_by_shares(struct tree_ *);
 static void zero_out_sent(struct tree_ *);
 static uint32_t compute_deviate(struct tree_node_ *, uint32_t, uint32_t);
 static void make_leafs(struct tree_ *);
+static int get_distrib(struct tree_ *);
+static void print_distrib(struct tree_ *);
 
 /* sshare_make_tree()
  * In this function we match the user_shares as configured
@@ -191,6 +193,10 @@ sshare_distribute_slots(struct tree_ *t,
     struct share_acct *sacct;
     uint32_t avail;
     int tried;
+    int last;
+    int prev_last;
+    int x;
+    int total_slots;
 
     stack = make_link();
     /* This must be emptied after every scheduling
@@ -199,11 +205,13 @@ sshare_distribute_slots(struct tree_ *t,
      */
     while (pop_link(t->leafs))
         ;
-    avail = slots;
+
+    avail = total_slots = slots;
 
     sort_tree_by_deviate(t);
     zero_out_sent(t);
     tried = 0;
+    last = prev_last = 0;
     /* only after sort get the first child
      */
     n = t->root->child;
@@ -233,12 +241,6 @@ znovu:
         avail = avail - compute_slots(n, slots, avail);
 
         assert(avail >= 0);
-        /* As we traverse in priority order
-         * the leafs are also sorted
-         */
-        if (n->child == NULL)
-            enqueue_link(t->leafs, n);
-
         n = n->right;
     }
 
@@ -247,19 +249,35 @@ znovu:
         /* tokens come from the parent
          */
         sacct = n->data;
-        avail = slots = sacct->sent;
+        avail = slots = sacct->avail;
         n = n->child;
         goto znovu;
     }
 
-    if (avail > 0
-        && tried == 0) {
+    x = get_distrib(t);
+    last = total_slots - x;
+    if (last > 0
+        && prev_last != last
+        && tried < 1000) {
         ++tried;
+        prev_last = last;
+        avail = last;
+        slots = last;
         n = t->root->child;
         goto znovu;
     }
 
+    if (tried >= 1000
+        || last < 0) {
+        ls_syslog(LOG_ERR, "\
+%s: tried %d >= 1000 total_slots %d last %d prev_last %d", __func__,
+                  tried, total_slots, last, prev_last);
+    }
+
     fin_link(stack);
+
+    if (logclass & LC_FAIR)
+        print_distrib(t);
 
     return 0;
 }
@@ -349,13 +367,6 @@ znovu:
         goto znovu;
     }
 
-    if (avail > 0
-        && tried == 0) {
-        ++tried;
-        n = t->root->child;
-        goto znovu;
-    }
-
     fin_link(stack);
 
     return 0;
@@ -417,7 +428,7 @@ znovu:
             enqueue_link(stack, n);
 
         s = n->data;
-        s->sent = 0;
+        s->avail = s->sent = 0;
         n = n->right;
     }
 
@@ -473,9 +484,10 @@ compute_slots(struct tree_node_ *n, uint32_t total, uint32_t avail)
     q = s->dshares * (double)total;
     u = (uint32_t)ceil(q);
     x = MIN(u, avail);
-    s->sent = s->sent + MIN(s->numPEND, x);
+    s->avail = MIN((s->numPEND - s->sent), x);
+    s->sent = s->sent + s->avail;
 
-    return s->sent;
+    return s->avail;
 }
 
 /* sort_tree_by_deviate()
@@ -509,13 +521,6 @@ znovu:
         /* sum up the historical.
          */
         sum = sum + s->numRAN;
-
-        if (logclass & LC_FAIR) {
-            ls_syslog(LOG_INFO, "\
-%s: updating %s pend %d run %d ran %d", __func__,
-                      s->name, s->numPEND, s->numRAN, s->numRUN);
-        }
-
         n = n->right;
     }
 
@@ -538,7 +543,7 @@ znovu:
         while (n) {
             s = n->data;
             ls_syslog(LOG_INFO, "\
-%s: sorted %s pend %d ran %d run %d", __func__,
+%s: sorted %s pend %d started %d run %d", __func__,
                       s->name, s->numPEND, s->numRAN, s->numRUN);
             n = n->right;
         }
@@ -576,9 +581,9 @@ compute_deviate(struct tree_node_ *n,
      */
     s->dsrv2 = u - s->numRAN;
 
-    if (logclass & LC_FAIR) {
+    if (0 && logclass & LC_FAIR) {
         ls_syslog(LOG_INFO, "\
-%s: shares %s ideal %f ceil(ideal) %d numRAN %d deserve %d", __func__,
+%s: shares %s ideal %f ceil(ideal) %d started %d deserve %d", __func__,
                   s->name, q, u, s->numRAN, (u - s->numRAN));
     }
 
@@ -643,12 +648,17 @@ static void
 make_leafs(struct tree_ *t)
 {
     struct tree_node_ *n;
+    struct share_acct *s;
 
     while(pop_link(t->leafs))
         ;
 
     n = t->root;
     while ((n = tree_next_node(n))) {
+
+        s = n->data;
+        if (s->options & SACCT_USER_ALL)
+            continue;
 
         if (n->child == NULL) {
             enqueue_link(t->leafs, n);
@@ -971,4 +981,50 @@ print_node(struct tree_node_ *n, struct tree_ *t)
                __func__, n->name, s->shares, s->dshares);
 
     return -1;
+}
+
+/* get_distrib()
+ */
+static int
+get_distrib(struct tree_ *t)
+{
+    linkiter_t iter;
+    struct share_acct *sacct;
+    struct tree_node_ *n;
+    int sum;
+
+    sum = 0;
+    traverse_init(t->leafs, &iter);
+    while ((n = traverse_link(&iter))) {
+
+        sacct = n->data;
+        if (sacct->options & SACCT_USER_ALL)
+            continue;
+        sum = sum + sacct->sent;
+    }
+
+    return sum;
+}
+
+/* print_distrib()
+ */
+static void
+print_distrib(struct tree_ *t)
+{
+    linkiter_t iter;
+    struct share_acct *s;
+    struct tree_node_ *n;
+
+    traverse_init(t->leafs, &iter);
+    while ((n = traverse_link(&iter))) {
+
+        s = n->data;
+        if (s->options & SACCT_USER_ALL)
+            continue;
+
+        ls_syslog(LOG_INFO, "\
+%s: acct %s sent %d pend %d started %d run %d", __func__,
+                  s->name, s->sent, s->numPEND,
+                  s->numRAN, s->numRUN);
+    }
 }

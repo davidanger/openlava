@@ -1,8 +1,34 @@
 Release notes for OpenLava versions
 
-Master
-=======
+4.0beta2
+============
 
+-- Add Platform MPI wrapper.
+-- Use bash for etc/openlava to support Ubuntu.
+-- Fixed rusage string parsing bug.
+-- Introduce USUSP and SSUSP counters in the fairshare accounts. Previously
+   suspended jobs were accounted as running leading to erroneous state
+   transition from suspended to pending state.
+-- Implement a new lsf.conf variable named LSB_DEFAULT_USER_GROUP="group name".
+   If this variable is specified than jobs that do not specify -G at submission
+   time will be assigned LSB_DEFAULT_USER_GROUP as group. This group must be
+   configured among valid groups in a fairshare queue.
+-- In the fairshare scheduling if a user has jobs that enforce a user group
+   and jobs that don't, schedule both types of jobs with -G jobs first.
+-- Implement a set of fixes related to fairshare job selection which were
+   causing the scheduler to slowly dispatch jobs even if slots were available
+   and set incomplete pending reasons.
+-- Fixed slot based and resource preemption job replay bug. Fixed slot based
+   preemption memory leak, and man pages.
+-- Implement a slot based queue preemption in which jobs are suspended,
+   instead of requeued.
+-- If the MBD does not set the pending reasons for a job print:
+   "System is unable to set pending reason for job;" in the bjobs -p
+   output instead of blank or meaningless string.
+-- badmin ckconfig checks the ownership and permission of work/logdir.
+-- In bqueues -l output change the keyword RAN to STARTED to reflect
+   the number of started jobs and not only ran.
+-- lsid prints the 4.0beta2 identification for the current branch.
 -- Implement the decay slot factor for HIST_MINUTES.
 
 4.0beta1

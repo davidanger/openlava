@@ -89,7 +89,6 @@ int    qAttributes = 0;
 int    **hReasonTb = NULL;
 int    **cReasonTb = NULL;
 time_t now;
-long   schedSeqNo = 0;
 struct hTab uDataList;
 
 /* Link to usable proxy hosts and counter of
@@ -163,7 +162,6 @@ float maxCpuFactor = 0.0;
 struct sharedResource **sharedResources = NULL;
 
 int sharedResourceUpdFactor = INFINIT_INT;
-long   schedSeqNo;
 int    schedule;
 int lsbModifyAllJobs = FALSE;
 int max_job_sched = INT32_MAX;

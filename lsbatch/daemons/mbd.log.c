@@ -1441,7 +1441,11 @@ replay_jobpreempted(char *file, int num)
 
     jPtr->preempted_by = LSB_JOBID(jLog->preempted_by,
                                    jLog->preempted_by_idx);
-
+    if (mbdParams->preemptableResources)
+         jPtr->jFlags |= JFLAG_RES_PREEMPTED;
+    else if (mbdParams->preempt_slot_suspend)
+         jPtr->jFlags |= JFLAG_SLOT_PREEMPTED;
+          
     return true;
 }
 

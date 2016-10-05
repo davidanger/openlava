@@ -384,7 +384,9 @@ addJobIdHT(struct jData *job)
 void
 handleNewJob(struct jData *jpbw, int job, int eventTime)
 {
-    ls_syslog(LOG_DEBUG, "%s: Entering this routine...", __func__);
+    if (logclass & LC_SCHED)
+        ls_syslog(LOG_INFO, "\
+%s: Entering this routine job %s", __func__, lsb_jobid2str(jpbw->jobId));
 
     addJobIdHT(jpbw);
     inPendJobList(jpbw, PJL, 0);
@@ -929,6 +931,7 @@ freeNewJob (struct jData *newjob)
     FREEUP (newjob->askedPtr);
     FREEUP (newjob->reqHistory);
     destroySharedRef(newjob->shared);
+    fin_link(newjob->preempted_hosts);
     FREEUP (newjob);
 }
 
@@ -6471,6 +6474,7 @@ freeJData(struct jData *jPtr)
     FREE_ALL_GRPS_CAND(jPtr);
 
     if (jPtr->numRef <= 0 ) {
+        fin_link(jPtr->preempted_hosts);
         FREEUP(jPtr);
     } else {
 
@@ -7892,6 +7896,7 @@ destroyjDataRef(struct jData *jp)
         if ((jp->jStatus & JOB_STAT_VOID) && (jp->numRef <= 0)) {
 
             voidJobList = listSetDel((long)jp, voidJobList);
+            fin_link(jp->preempted_hosts);
             FREEUP(jp);
         }
     }

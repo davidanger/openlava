@@ -185,14 +185,17 @@ copyJData(struct jData *jp)
     struct jData *jData;
     struct rqHistory *reqHistory;
     int          i;
+    link_t *preempted_hosts;
 
     jData = initJData(jp->shared);
+    preempted_hosts = jData->preempted_hosts;
 
     if (jData->jobSpoolDir) {
         FREEUP(jData->jobSpoolDir);
     }
     reqHistory = jData->reqHistory;
     memcpy((char *)jData, (char *)jp, sizeof(struct jData));
+    jData->preempted_hosts = preempted_hosts;
     jData->reqHistory = reqHistory;
     jData->numRef = 0;
     jData->nextJob = NULL;
@@ -253,6 +256,10 @@ handleNewJobArray(struct jData *jarray,
     int numJobs = 0;
     int i;
     int userPending = 0;
+
+    if (logclass & LC_SCHED)
+        ls_syslog(LOG_INFO, "\
+%s: Entering this routine job %s", __func__, lsb_jobid2str(jarray->jobId));
 
     addJobIdHT(jarray);
     jarray->nodeType = JGRP_NODE_ARRAY;
