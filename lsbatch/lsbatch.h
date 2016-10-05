@@ -1564,7 +1564,8 @@ struct limitConsumer {
 typedef enum limitResType {
     LIMIT_RESOURCE_SLOTS = 0,
     LIMIT_RESOURCE_JOBS = 1,
-    LIMIT_RESOURCE_TYPE_NUM = 2  /* how many resource types */
+    LIMIT_RESOURCE_SLOTS_PER_PROCESSOR = 2,
+    LIMIT_RESOURCE_TYPE_NUM = 3  /* how many resource types */
 } limitResType_t;
 
 struct limitRes {

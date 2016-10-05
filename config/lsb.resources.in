@@ -22,6 +22,7 @@
 # Resource types:
 # JOBS - Maximum number of running or suspended (RUN, SSUSP, USUSP) jobs available to resource consumers.
 # SLOTS - Maximum number of job slots available to resource consumers.
+# SLOTS_PER_PROCESSOR - Maximum number of job slots per processor available to resource consumers.
 
 # Syntax:
 # USERS | PER_USER = all [~]user_name ... | all [~]user_group ...
@@ -93,4 +94,12 @@
 #PER_HOST = hostGrp1
 #QUEUES = low
 #SLOTS = 12
+#End Limit
+
+# Example 9: per processor slot limit on each host
+#Begin Limit
+#NAME = ProcessorSlotLimit
+#PER_HOST = host0 hostGrp1
+#QUEUES = regression priority
+#SLOTS_PER_PROCESSOR = 1.5
 #End Limit

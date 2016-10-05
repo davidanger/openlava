@@ -4988,18 +4988,23 @@ freeLimitInfo(struct resLimit *rl)
     if (rl == NULL)
         return;
 
-    for (i = 0; i < rl->nConsumer; i++) {
-        FREEUP(rl->consumers[i].def);
-        FREEUP(rl->consumers[i].value);
+    if (rl->consumers) {
+        for (i = 0; i < rl->nConsumer; i++) {
+            FREEUP(rl->consumers[i].def);
+            FREEUP(rl->consumers[i].value);
+        }
+        FREEUP(rl->consumers);
     }
 
-    for (i = 0; i < rl->nRes; i++) {
-        FREEUP(rl->res[i].windows);
-        freeWeek(rl->res[i].week);
+    if (rl->res) {
+        for (i = 0; i < rl->nRes; i++) {
+            FREEUP(rl->res[i].windows);
+            freeWeek(rl->res[i].week);
+        }
+
+        FREEUP(rl->res);
     }
 
-    FREEUP(rl->consumers);
-    FREEUP(rl->res);
     FREEUP(rl->name);
     FREEUP(rl);
 }
@@ -8143,6 +8148,7 @@ do_ResLimits(struct lsConf *conf, char *fname, int *lineNum)
         {"PER_USER", NULL, 0},      /* 8 */
         {"SLOTS", NULL, 0},         /* 9 */
         {"JOBS", NULL, 0},          /* 10 */
+        {"SLOTS_PER_PROCESSOR", NULL, 0},  /* 11 */
         {NULL, NULL, 0}
     };
     char* mapConsumerType2Name[] = {
@@ -8157,7 +8163,8 @@ do_ResLimits(struct lsConf *conf, char *fname, int *lineNum)
     };
     static char* mapResType2Name[] = {
         "SLOTS",
-        "JOBS"
+        "JOBS",
+        "SLOTS_PER_PROCESSOR"
     };
 
     if (conf == NULL)
@@ -8431,6 +8438,27 @@ do_ResLimits(struct lsConf *conf, char *fname, int *lineNum)
         }
     }
 
+    /*SLOTS_PER_PROCESSOR*/
+    if (keylist[11].val != NULL
+        && strcmp(keylist[11].val, "")) {
+        if (keylist[6].val == NULL || !strcmp(keylist[6].val, "")) {
+            ls_syslog(LOG_ERR, "\
+%s: File %s in section Limit ending at line %d: SLOTS_PER_PROCESSOR is specified without PER_HOST; ignoring the limit",  __func__, fname, *lineNum);
+            lsberrno = LSBE_CONF_WARNING;
+            freekeyval (keylist);
+            freeLimitInfo(limitPtr);
+            return FALSE;
+        }
+
+        if ((limitPtr->res = parseTimeWindowRes(keylist[11].val,
+                             fname, lineNum, LIMIT_RESOURCE_SLOTS_PER_PROCESSOR,
+                             &limitPtr->nRes)) == NULL) {
+            freekeyval (keylist);
+            freeLimitInfo(limitPtr);
+            return FALSE;
+        }
+    }
+
     limits[numofreslimits] = limitPtr;
     numofreslimits++;
     freekeyval (keylist);
@@ -8440,6 +8468,7 @@ do_ResLimits(struct lsConf *conf, char *fname, int *lineNum)
 /*
  * SLOTS = [200 09:00-17:00] [100 17:00-09:00]
  * JOBS = 100
+ * SLOTS_PER_PROCESSOR = 2
  */
 static struct limitRes *
 parseTimeWindowRes(char *linep, char *fname, int *lineNum, limitResType_t type, int *nres)
@@ -8490,12 +8519,22 @@ parseTimeWindowRes(char *linep, char *fname, int *lineNum, limitResType_t type, 
         resLimits[idx].res = type;
 
         word = getNextWord_(&sp);
-        if ((resLimits[idx].value = my_atoi(word, INFINIT_INT, -1)) == INFINIT_INT) {
-            ls_syslog(LOG_ERR, "\
+        if (type == LIMIT_RESOURCE_SLOTS_PER_PROCESSOR) {
+            if ((resLimits[idx].value = my_atof(word, INFINIT_FLOAT, -1.0)) == INFINIT_FLOAT) {
+                ls_syslog(LOG_ERR, "\
+%s: File %s in section Limit ending at line %d: SLOTS_PER_PROCESSOR value <%s> isn't a float number between 0 and %1.1f; ignored",
+                                     __func__, fname, *lineNum,
+                                     word, INFINIT_FLOAT);
+                goto clean;
+            }
+        } else {
+            if ((resLimits[idx].value = my_atoi(word, INFINIT_INT, -1)) == INFINIT_INT) {
+                ls_syslog(LOG_ERR, "\
 %s: File %s in section Limit ending at line %d: SLOTS or JOBS value <%s> isn't a non-negative integer between -1 and %d; ignored",
                      __func__, fname, *lineNum,
                      word, INFINIT_INT);
-            goto clean;
+                goto clean;
+            }
         }
 
         word = getNextWord_(&sp);

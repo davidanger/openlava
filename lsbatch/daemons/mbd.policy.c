@@ -227,7 +227,8 @@ static int cntUserJobs(struct jData *, struct gData *, struct hData *,
 
 static int candHostOk(struct jData *jp, int indx, int *numAvailSlots,
                       int *hReason);
-static int checkResLimit(struct jData *jp, char*);
+static void cntMaxResLimit(struct limitRes *, struct resData *, struct hData *);
+static int checkResLimit(struct jData *jp, struct hData *hp);
 static int checkIfLimitIsOk(struct limitRes *,
                         limitConsumerType_t,
                         char *,
@@ -1434,25 +1435,6 @@ getJUsable(struct jData *jp, int *numJUsable, int *nProc)
     }
 
     num = numHosts;
-    numHosts = 0;
-    for (i = 0; i < num; i++) {
-        if (checkResLimit(jp, jUsable[i]->host)) {
-            if (numHosts != i) {
-                jUsable[numHosts] = jUsable[i];
-            }
-            numHosts++;
-        } else {
-            jUnusable[numReasons] = jUsable[i];
-            jReasonTb[numReasons++] = PEND_RES_LIMIT;
-            if (logclass & (LC_SCHED | LC_PEND))
-                ls_syslog(LOG_INFO, "\
-%s: checkResLimits() job %s host %s is not eligible; reason %d", __func__,
-                          lsb_jobid2str(jp->jobId),
-                          jUsable[i]->host, jReasonTb[numReasons-1]);
-        }
-    }
-
-    num = numHosts;
     if ((!jp->qPtr->resValPtr
          || !(jp->qPtr->qAttrib & Q_ATTRIB_NO_HOST_TYPE))
         && !jp->shared->resValPtr
@@ -1590,6 +1572,14 @@ getJUsable(struct jData *jp, int *numJUsable, int *nProc)
                 ls_syslog(LOG_INFO, "\
 %s: PEND_HOST_NONEXCLUSIVE job %s unusable host %s", __func__,
                           lsb_jobid2str(jp->jobId), jUsable[i]->host);
+            }
+        }
+
+        if (!hReason) {
+            if (!checkResLimit(jp, jUsable[i])) {
+                hReason = PEND_RES_LIMIT;
+                if (logclass & (LC_SCHED | LC_PEND))
+                    ls_syslog(LOG_DEBUG2, "%s: Host <%s> isn't usable to job <%s> because it doesn't satisfy resource limit", fname, jUsable[i]->host, lsb_jobid2str(jp->jobId));
             }
         }
 
@@ -3041,9 +3031,10 @@ hostSlots (int numNeeded, struct jData *jp, struct hData *hp,
 }
 
 static int
-checkResLimit(struct jData *jp, char* hostname)
+checkResLimit(struct jData *jp, struct hData *hp)
 {
     int i, j;
+    char *hostname = NULL;
     char *queue = NULL;
     char *save_queue = NULL;
     int  per_queue = FALSE;
@@ -3066,6 +3057,9 @@ checkResLimit(struct jData *jp, char* hostname)
 
     if (limitConf == NULL || limitConf->nLimit == 0)
         return TRUE;
+
+    if (hp)
+        hostname = hp->host;
 
     for (i = 0; i < limitConf->nLimit; i++) {
         /* no consumer defined, ignore */
@@ -3136,7 +3130,7 @@ checkResLimit(struct jData *jp, char* hostname)
 
                 lr = getActiveLimit(limitConf->limits[i].res, limitConf->limits[i].nRes);
                 if (lr) {
-                    jp->hqPtr->maxSlots = jp->hqPtr->maxJobs = (int) lr->value;
+                    cntMaxResLimit(lr, jp->hqPtr, hp);
                     ret = checkIfLimitIsOk(lr,
                                        LIMIT_CONSUMER_PER_HOST,
                                        hostname,
@@ -3168,12 +3162,7 @@ checkResLimit(struct jData *jp, char* hostname)
             if (hasMe) {
                 lr = getActiveLimit(limitConf->limits[i].res, limitConf->limits[i].nRes);
                 if (lr) {
-                    jp->uqPtr->maxSlots = jp->uqPtr->maxJobs = (int) lr->value;
-                    if (lr->res == LIMIT_RESOURCE_SLOTS)
-                        jp->uqPtr->maxSlots = (int) lr->value;
-                    else
-                        jp->uqPtr->maxJobs = (int) lr->value;
-
+                    cntMaxResLimit(lr, jp->uqPtr, hp);
                     ret = checkIfLimitIsOk(lr,
                                        LIMIT_CONSUMER_PER_USER,
                                        jp->userName,
@@ -3232,11 +3221,7 @@ checkResLimit(struct jData *jp, char* hostname)
                         || (hasAll && !hasMe)) {
                     lr = getActiveLimit(limitConf->limits[i].res, limitConf->limits[i].nRes);
                     if (lr) {
-                        if (lr->res == LIMIT_RESOURCE_SLOTS)
-                            jp->uqPtr->maxSlots = (int) lr->value;
-                        else
-                            jp->uqPtr->maxJobs = (int) lr->value;
-
+                        cntMaxResLimit(lr, jp->uqPtr, hp);
                         ret = checkIfLimitIsOk(lr,
                                            LIMIT_CONSUMER_PER_USER,
                                            jp->userName,
@@ -3284,11 +3269,7 @@ checkResLimit(struct jData *jp, char* hostname)
                     || (hasAll && !hasMe)) {
                 lr = getActiveLimit(limitConf->limits[i].res, limitConf->limits[i].nRes);
                 if (lr) {
-                    if (lr->res == LIMIT_RESOURCE_SLOTS)
-                        jp->pqPtr->maxSlots = (int) lr->value;
-                    else
-                        jp->pqPtr->maxJobs = (int) lr->value;
-
+                    cntMaxResLimit(lr, jp->pqPtr, hp);
                     ret = checkIfLimitIsOk(lr,
                                        LIMIT_CONSUMER_PER_PROJECT,
                                        jp->shared->jobBill.projectName,
@@ -3328,6 +3309,22 @@ checkResLimit(struct jData *jp, char* hostname)
     return TRUE;
 }
 
+static void
+cntMaxResLimit(struct limitRes *lr,
+                 struct resData *rp,
+                 struct hData *hp)
+{
+    if (lr->res == LIMIT_RESOURCE_SLOTS) {
+        rp->maxSlots = (int) lr->value;
+    } else if (lr->res == LIMIT_RESOURCE_SLOTS_PER_PROCESSOR) {
+        int numCPUs;
+        numCPUs = hp->numCPUs == 0 ? 1 : hp->numCPUs;
+        rp->maxSlots = (int) ceil((float) (lr->value * numCPUs));
+    } else {
+        rp->maxJobs = (int) lr->value;
+    }
+}
+
 /*
  * Only support:
  * i) per user on queues job/slot limit
@@ -3348,7 +3345,7 @@ checkIfLimitIsOk(struct limitRes *limit,
     struct resData  *rPtr = NULL;
     int    used = 0;
     int    free = 0;
-    int    max = limit->value;
+    int    max = 0;
 
     if (ctype == LIMIT_CONSUMER_PROJECTS
             || ctype == LIMIT_CONSUMER_PER_PROJECT)
@@ -3359,7 +3356,9 @@ checkIfLimitIsOk(struct limitRes *limit,
     else
         rPtr = jp->hqPtr;
 
-    if (limit->res == LIMIT_RESOURCE_SLOTS) {
+    if (limit->res == LIMIT_RESOURCE_SLOTS
+            || limit->res == LIMIT_RESOURCE_SLOTS_PER_PROCESSOR) {
+        max = rPtr->maxSlots;
         if (qtype == LIMIT_CONSUMER_PER_QUEUE)
             used = rPtr->numRUNSlots
                    + rPtr->numSSUSPSlots
@@ -3374,6 +3373,7 @@ checkIfLimitIsOk(struct limitRes *limit,
                - used
                - jp->shared->jobBill.numProcessors;
     } else {
+        max = rPtr->maxJobs;
         if (qtype == LIMIT_CONSUMER_PER_QUEUE)
             used = rPtr->numRUNJobs
                    + rPtr->numSSUSPSlots

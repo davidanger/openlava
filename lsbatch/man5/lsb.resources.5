@@ -47,6 +47,8 @@ Resource type:
 .HP 2
 \(bu SLOTS
 .HP 2
+\(bu SLOTS_PER_PROCESSOR
+.HP 2
 \(bu JOBS
 .RE
 .PP
@@ -227,6 +229,36 @@ No limit.
 .PP
 .PP
 \fBSLOTS\fR \fB=\fR \fI[20 09:00-17:00] [10 17:00-09:00] [100 5:20:00-1:08:00]\fR
+.SH SLOTS_PER_PROCESSOR
+.BR
+.PP
+.SS Syntax
+.BR
+.PP
+.PP
+\fBSLOTS_PER_PROCESSOR\fR \fB=\fR \fInumber\fR | [\fInumber\fR \fI[day:]hour[:minute]\fR] ...
+.SS Description
+.BR
+.PP
+.PP
+Maximum number of job slots per processor available to resource consumers.
+.PP
+Must also specify PER_HOST and list the hosts that the limit is to be enforced on.
+The Limit section is ignored if SLOTS_PER_PROCESSOR is specified without PER_HOST.
+.PP
+Time window is optional. The limit is enforced only if current time falls within this time window.
+.SS Default
+.BR
+.PP
+.PP
+No limit.
+.SS Example
+.BR
+.PP
+.PP
+\fBSLOTS_PER_PROCESSOR\fR \fB=\fR \fI2\fR
+.PP
+\fBSLOTS_PER_PROCESSOR\fR \fB=\fR \fI[1 09:00-17:00] [0.6 17:00-09:00] [2 5:20:00-1:08:00]\fR
 .SH JOBS
 .BR
 .PP
@@ -234,12 +266,14 @@ No limit.
 .BR
 .PP
 .PP
-\fBJOBS\fR \fB=\fR \fIinteger\fR
+\fBJOBS\fR \fB=\fR \fIinteger\fR | [\fIinteger\fR \fI[day:]hour[:minute]\fR] ...
 .SS Description
 .BR
 .PP
 .PP
 Maximum number of running or suspended (RUN, SSUSP, USUSP) jobs available to resource consumers.
+.PP
+Time window is optional. The limit is enforced only if current time falls within this time window.
 .SS Default
 .BR
 .PP
@@ -250,6 +284,8 @@ No limit.
 .PP
 .PP
 \fBJOBS\fR \fB=\fR \fI20\fR
+.PP
+\fBJOBS\fR \fB=\fR \fI[10 09:00-17:00] [20 17:00-09:00] [50 5:20:00-1:08:00]\fR
 .SH Examples of Limit Section
 .BR
 .PP
@@ -386,6 +422,24 @@ QUEUES = low
 SLOTS = 12
 .br
 End Limit
+.PP
+.SS Example 9: per processor slot limit on each host
+.BR
+.PP
+
+.PP
+Begin Limit
+.br
+NAME = ProcessorSlotLimit
+.br
+PER_HOST = host0 hostGrp1
+.br
+QUEUES = regression priority
+.br
+SLOTS_PER_PROCESSOR = 1.5
+.br
+End Limit
+
 .SH SEE ALSO
 .BR
 .PP

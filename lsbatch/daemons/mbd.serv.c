@@ -3638,7 +3638,15 @@ getLimitUsage(struct resLimit *limit, struct resData *pAcct)
         + pAcct->numUSUSPJobs
         + pAcct->numRESERVEJobs;
 
-    usage->maxSlots = usage->maxJobs = lr->value;
+    if (lr->res == LIMIT_RESOURCE_SLOTS_PER_PROCESSOR) {
+        struct hData *hp = getHostData(usage->host);
+        int numCPUs = hp->numCPUs == 0 ? 1 : hp->numCPUs;
+        usage->maxSlots = (int) ceil((float) (lr->value * numCPUs));
+    } else if (lr->res == LIMIT_RESOURCE_SLOTS) {
+        usage->maxSlots = lr->value;
+    } else {
+        usage->maxJobs= lr->value;
+    }
 
 clean:
     FREEUP(save_queue);

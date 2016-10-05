@@ -77,6 +77,7 @@ print_limits(struct resLimitReply *reply)
 {
     int i, j, k;
     int slimit, jlimit;
+    float plimit;
     char *name;
     int  inUse;
 
@@ -119,12 +120,16 @@ print_limits(struct resLimitReply *reply)
                 printf("    expand : %s\n", reply->limits[i].consumers[j].value);
         }
 
-        slimit = jlimit = 0;
+        slimit = jlimit = plimit = -1;
         for (j = 0; j < reply->limits[i].nRes; j++) {
              switch (reply->limits[i].res[j].res) {
                 case LIMIT_RESOURCE_SLOTS:
                     name = "SLOTS";
                     slimit = (int)reply->limits[i].res[j].value;
+                    break;
+                case LIMIT_RESOURCE_SLOTS_PER_PROCESSOR:
+                    name = "SLOTS_PER_PROCESSOR";
+                    plimit = reply->limits[i].res[j].value;
                     break;
                 case LIMIT_RESOURCE_JOBS:
                     name = "JOBS";
@@ -134,11 +139,14 @@ print_limits(struct resLimitReply *reply)
                     usage();
                     exit(-1);
             }
-            printf("%-10s : %d %s\n", name, (int)(reply->limits[i].res[j].value), reply->limits[i].res[j].windows);
+            if (reply->limits[i].res[j].res == LIMIT_RESOURCE_SLOTS_PER_PROCESSOR)
+                printf("%-10s : %.1f %s\n", name, reply->limits[i].res[j].value, reply->limits[i].res[j].windows);
+            else
+                printf("%-10s : %d %s\n", name, (int)(reply->limits[i].res[j].value), reply->limits[i].res[j].windows);
         }
 
         if (reply->numUsage > 0
-                && (slimit > 0 || jlimit > 0)) {
+                && (slimit > 0 || jlimit > 0 || plimit > 0)) {
             printf("\n%s\n", "CURRENT LIMIT RESOURCE USAGE:");
             printf("    %-10s  %-10s  %-10s  %-10s  %-10s  %-10s\n",
                    "PROJECT", "QUEUE", "USER", "HOST", "SLOTS", "JOBS");
@@ -151,7 +159,7 @@ print_limits(struct resLimitReply *reply)
                         || (reply->usage[k].slots <= 0 && reply->usage[k].jobs <= 0))
                     continue;
 
-                if (slimit > 0)
+                if (slimit > 0 || plimit > 0)
                     sprintf(buf1, "%d/%d", (int)reply->usage[k].slots, (int)reply->usage[k].maxSlots);
                 else
                     sprintf(buf1, "%s", "-");

@@ -3,6 +3,8 @@ Release notes for OpenLava versions
 Master
 ========
 
+-- Implement SLOTS_PER_PROCESSOR in lsb.resources.
+
 4.0beta2
 ============
 
