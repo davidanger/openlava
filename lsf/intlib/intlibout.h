@@ -34,14 +34,6 @@
 #define EXIT_WARNING_ERROR 	(-2)
 #define EXIT_RUN_ERROR     	(-8)
 
-struct windows {
-    struct windows *     nextwind;
-    float                opentime;
-    float                closetime;
-};
-
-typedef struct windows windows_t;
-
 struct dayhour {
     short                day;
     float                hour;

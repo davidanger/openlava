@@ -585,6 +585,14 @@ typedef enum {
     EV_EVENT_LAST
 } event_t;
 
+struct windows {
+    struct windows *     nextwind;
+    float                opentime;
+    float                closetime;
+};
+
+typedef struct windows windows_t;
+
 /* openlava LIM events
  */
 struct lsEventRec {

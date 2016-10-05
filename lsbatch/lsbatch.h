@@ -24,7 +24,6 @@
 /* Include all Unix and openlava base definition.
  */
 #include <lsf.h>
-#include "../lsf/intlib/intlibout.h"
 
 
 #define _PATH_NULL      "/dev/null"
