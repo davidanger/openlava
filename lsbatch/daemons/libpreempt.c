@@ -396,6 +396,13 @@ is_preemptable_resource(const char *res)
 static bool_t
 is_pend_for_slot(struct jData *jPtr)
 {
+    if (! (jPtr->jStatus & JOB_STAT_PEND
+           && jPtr->newReason)) {
+        return false;
+    }
+
+    return true;
+#if 0
     int cc;
     int reason;
 
@@ -412,6 +419,5 @@ is_pend_for_slot(struct jData *jPtr)
         if (reason != PEND_HOST_JOB_LIMIT)
             return false;
     }
-
-    return true;
+#endif
 }
