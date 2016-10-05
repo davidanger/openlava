@@ -397,7 +397,7 @@ static bool_t
 is_pend_for_slot(struct jData *jPtr)
 {
     if (! (jPtr->jStatus & JOB_STAT_PEND
-           && jPtr->newReason)) {
+           && jPtr->newReason == 0)) {
         return false;
     }
 
