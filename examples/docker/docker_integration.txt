@@ -32,9 +32,9 @@ openlava jobid, all control operation of the openlava and docker side
 are done using the jobid.
 The image:tag that are needed for docker to identify which image has
 to be used to run the container has to be specified in the submission
-environment as LSB_DOCKER_IMAGE. e.g in bash shell:
+environment as LSB_DOCKER_CONTAINER. e.g in bash shell:
 
-export  LSB_DOCKER_IMAGE=centos:app
+export  LSB_DOCKER_CONTAINER=centos:app
 
 This variable has to be set either by the user or by the tool administrator.
 
@@ -107,10 +107,10 @@ centos      app    62641afe6cf4  4 days ago       603.4 MB
 
 We want to run the application hello inside the image centos:app.
 
-5.2) Set the LSB_DOCKER_IMAGE in the environment, alternatively the
+5.2) Set the LSB_DOCKER_CONTAINER in the environment, alternatively the
 admin of the tool will set it in the execution script.
 
-export LSB_DOCKER_IMAGE=centos:app
+export LSB_DOCKER_CONTAINER=centos:app
 
 5.3) Submit a batch job.
 
