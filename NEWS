@@ -11,6 +11,8 @@ Master
 4.0beta2
 ============
 
+-- Fix mbatchd bug which prevented jobs in interactive queue from being
+   modified if LSB_DEFAULT_USER_GROUP was configured in lsf.conf.
 -- Add Platform MPI wrapper.
 -- Use bash for etc/openlava to support Ubuntu.
 -- Fixed rusage string parsing bug.
