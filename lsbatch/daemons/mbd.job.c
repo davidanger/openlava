@@ -6616,7 +6616,7 @@ mergeSubReq(struct submitReq *to, struct submitReq *old,
     }
 
     if (old->options & SUB_USER_GROUP) {
-        to->options = SUB_USER_GROUP;
+        to->options |= SUB_USER_GROUP;
         to->userGroup = strdup(old->userGroup);
     } else {
         to->userGroup = strdup("");
